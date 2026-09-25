@@ -64,6 +64,7 @@ class OpenAICompatibleConfig(StatelessLLMBaseConfig):
     organization_id: str | None = Field(None, alias="organization_id")
     project_id: str | None = Field(None, alias="project_id")
     temperature: float = Field(1.0, alias="temperature")
+    extra_body: dict | None = Field(None, alias="extra_body")
 
     _OPENAI_COMPATIBLE_DESCRIPTIONS: ClassVar[dict[str, Description]] = {
         "base_url": Description(en="Base URL for the API endpoint", zh="API的URL端点"),
@@ -78,6 +79,12 @@ class OpenAICompatibleConfig(StatelessLLMBaseConfig):
         "temperature": Description(
             en="What sampling temperature to use, between 0 and 2.",
             zh="使用的采样温度，介于 0 和 2 之间。",
+        ),
+        "extra_body": Description(
+            en="Extra JSON fields merged into the request body "
+            "(e.g. {'effort': 'low'} to shorten DeepSeek reasoning)",
+            zh="合并进请求体的额外 JSON 字段"
+            "（例如 {'effort': 'low'} 可缩短 DeepSeek 的思考时间）",
         ),
     }
 
