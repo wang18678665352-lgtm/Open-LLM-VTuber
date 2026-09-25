@@ -333,6 +333,95 @@ class FishAPITTSConfig(I18nMixin):
     }
 
 
+class FishSpeechTTSConfig(I18nMixin):
+    """Configuration for a locally self-hosted Fish-Speech TTS server."""
+
+    api_url: str = Field("http://127.0.0.1:8080/v1/tts", alias="api_url")
+    api_key: Optional[str] = Field(None, alias="api_key")
+    reference_id: Optional[str] = Field(None, alias="reference_id")
+    reference_audio: Optional[str] = Field(None, alias="reference_audio")
+    reference_text: Optional[str] = Field(None, alias="reference_text")
+    use_memory_cache: bool = Field(True, alias="use_memory_cache")
+    chunk_length: int = Field(200, alias="chunk_length")
+    max_new_tokens: int = Field(1024, alias="max_new_tokens")
+    top_p: float = Field(0.8, alias="top_p")
+    repetition_penalty: float = Field(1.1, alias="repetition_penalty")
+    temperature: float = Field(0.8, alias="temperature")
+    normalize: bool = Field(True, alias="normalize")
+    seed: Optional[int] = Field(None, alias="seed")
+    timeout: float = Field(120.0, alias="timeout")
+    warmup: bool = Field(True, alias="warmup")
+    streaming: bool = Field(False, alias="streaming")
+
+    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+        "api_url": Description(
+            en="URL of the local fish-speech API server (/v1/tts endpoint)",
+            zh="本地 fish-speech API 服务地址（/v1/tts 端点）",
+        ),
+        "api_key": Description(
+            en="API key, only needed if the server was started with --api-key",
+            zh="API 密钥，仅在服务端用 --api-key 启动时需要",
+        ),
+        "reference_id": Description(
+            en="Server side reference voice id (a folder under fish-speech/references). "
+            "Takes priority over reference_audio and keeps the request body tiny.",
+            zh="服务端参考音色 ID（fish-speech/references 下的文件夹名）。"
+            "优先级高于 reference_audio，且请求体极小。",
+        ),
+        "reference_audio": Description(
+            en="Path to the reference audio used for zero-shot voice cloning",
+            zh="用于零样本声音克隆的参考音频路径",
+        ),
+        "reference_text": Description(
+            en="Exact transcript of reference_audio, or a path to a txt file containing it",
+            zh="reference_audio 的准确文本，或存放该文本的 txt 文件路径",
+        ),
+        "use_memory_cache": Description(
+            en="Let the server cache the encoded reference tokens in memory "
+            "(big latency win for repeated requests)",
+            zh="让服务端在内存中缓存参考音频的编码结果（对重复请求能显著降低延迟）",
+        ),
+        "chunk_length": Description(
+            en="Text chunk length for iterative generation (100-1000, latency/quality tradeoff)",
+            zh="迭代生成的文本分块长度（100-1000，影响延迟与质量）",
+        ),
+        "max_new_tokens": Description(
+            en="Maximum number of generated semantic tokens per request",
+            zh="每次请求最多生成的语义 token 数",
+        ),
+        "top_p": Description(en="Nucleus sampling top_p", zh="核采样 top_p"),
+        "repetition_penalty": Description(
+            en="Repetition penalty (1.0-2.0)", zh="重复惩罚（1.0-2.0）"
+        ),
+        "temperature": Description(
+            en="Sampling temperature (0.1-1.0)", zh="采样温度（0.1-1.0）"
+        ),
+        "normalize": Description(
+            en="Normalize text (better stability for numbers)",
+            zh="文本归一化（对数字更稳定）",
+        ),
+        "seed": Description(
+            en="Random seed, null for random", zh="随机种子，null 表示随机"
+        ),
+        "timeout": Description(
+            en="HTTP timeout in seconds for one TTS request",
+            zh="单次 TTS 请求的 HTTP 超时时间（秒）",
+        ),
+        "warmup": Description(
+            en="Send one throwaway request at startup to prime the model and the "
+            "reference cache (also acts as a health check)",
+            zh="启动时发一次预热请求，提前热好模型与参考音缓存（同时起到健康检查作用）",
+        ),
+        "streaming": Description(
+            en="Consume the server's /v1/tts_stream endpoint and forward audio "
+            "chunk by chunk, so playback starts before the full sentence is "
+            "synthesized",
+            zh="使用服务端的 /v1/tts_stream 流式接口逐块转发音频，"
+            "整句合成完之前就能开始播放",
+        ),
+    }
+
+
 class CoquiTTSConfig(I18nMixin):
     """Configuration for Coqui TTS."""
 
@@ -694,6 +783,7 @@ class TTSConfig(I18nMixin):
         "x_tts",
         "gpt_sovits_tts",
         "fish_api_tts",
+        "fish_speech_tts",
         "sherpa_onnx_tts",
         "siliconflow_tts",
         "openai_tts",  # Add openai_tts here
@@ -714,6 +804,9 @@ class TTSConfig(I18nMixin):
     x_tts: Optional[XTTSConfig] = Field(None, alias="x_tts")
     gpt_sovits_tts: Optional[GPTSoVITSConfig] = Field(None, alias="gpt_sovits")
     fish_api_tts: Optional[FishAPITTSConfig] = Field(None, alias="fish_api_tts")
+    fish_speech_tts: Optional[FishSpeechTTSConfig] = Field(
+        None, alias="fish_speech_tts"
+    )
     sherpa_onnx_tts: Optional[SherpaOnnxTTSConfig] = Field(
         None, alias="sherpa_onnx_tts"
     )
@@ -748,6 +841,10 @@ class TTSConfig(I18nMixin):
         ),
         "fish_api_tts": Description(
             en="Configuration for Fish API TTS", zh="Fish API TTS 配置"
+        ),
+        "fish_speech_tts": Description(
+            en="Configuration for a local self-hosted Fish-Speech server",
+            zh="本地自建 Fish-Speech 服务配置",
         ),
         "sherpa_onnx_tts": Description(
             en="Configuration for Sherpa Onnx TTS", zh="Sherpa Onnx TTS 配置"
@@ -796,6 +893,8 @@ class TTSConfig(I18nMixin):
             values.gpt_sovits_tts.model_validate(values.gpt_sovits_tts.model_dump())
         elif tts_model == "fish_api_tts" and values.fish_api_tts is not None:
             values.fish_api_tts.model_validate(values.fish_api_tts.model_dump())
+        elif tts_model == "fish_speech_tts" and values.fish_speech_tts is not None:
+            values.fish_speech_tts.model_validate(values.fish_speech_tts.model_dump())
         elif tts_model == "sherpa_onnx_tts" and values.sherpa_onnx_tts is not None:
             values.sherpa_onnx_tts.model_validate(values.sherpa_onnx_tts.model_dump())
         elif tts_model == "siliconflow_tts" and values.siliconflow_tts is not None:

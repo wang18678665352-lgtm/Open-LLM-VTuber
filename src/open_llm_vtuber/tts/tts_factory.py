@@ -121,6 +121,27 @@ class TTSFactory:
                 latency=kwargs.get("latency"),
                 base_url=kwargs.get("base_url"),
             )
+        elif engine_type == "fish_speech_tts":
+            from .fish_speech_tts import TTSEngine as FishSpeechTTSEngine
+
+            return FishSpeechTTSEngine(
+                api_url=kwargs.get("api_url"),
+                api_key=kwargs.get("api_key"),
+                reference_id=kwargs.get("reference_id"),
+                reference_audio=kwargs.get("reference_audio"),
+                reference_text=kwargs.get("reference_text"),
+                use_memory_cache=kwargs.get("use_memory_cache"),
+                chunk_length=kwargs.get("chunk_length"),
+                max_new_tokens=kwargs.get("max_new_tokens"),
+                top_p=kwargs.get("top_p"),
+                repetition_penalty=kwargs.get("repetition_penalty"),
+                temperature=kwargs.get("temperature"),
+                normalize=kwargs.get("normalize"),
+                seed=kwargs.get("seed"),
+                timeout=kwargs.get("timeout"),
+                warmup=kwargs.get("warmup"),
+                streaming=kwargs.get("streaming"),
+            )
         elif engine_type == "minimax_tts":
             from .minimax_tts import TTSEngine as MinimaxTTSEngine
 
