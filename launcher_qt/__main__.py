@@ -79,6 +79,7 @@ def main(argv: list[str] | None = None) -> int:
 
     from . import APP_NAME, APP_VERSION
     from .app import LauncherWindow, SingleInstanceGuard
+    from .core.icons import logo_icon
     from .core.paths import ICON_PATH
     from .core.theme import build_stylesheet, high_dpi_rounding_policy, set_app_user_model_id
 
@@ -89,10 +90,7 @@ def main(argv: list[str] | None = None) -> int:
     app.setApplicationName(APP_NAME)
     app.setApplicationDisplayName(APP_NAME)
     app.setApplicationVersion(APP_VERSION)
-    if ICON_PATH.exists():
-        from PySide6.QtGui import QIcon
-
-        app.setWindowIcon(QIcon(str(ICON_PATH)))
+    app.setWindowIcon(logo_icon())
     app.setStyleSheet(build_stylesheet())
 
     headless = bool(args.selftest or args.screenshot)

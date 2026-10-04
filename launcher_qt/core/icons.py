@@ -1,7 +1,8 @@
 """矢量图标：用 QPainter 现场绘制，无需外部图片资源，任意缩放都清晰。
 
-所有图标都在 24x24 的逻辑网格上作画，再按目标尺寸缩放，因此在高 DPI
-（125% / 150% 缩放）下依然是锐利的矢量效果，而不是被拉伸的位图。
+所有图标都在 24x24 的逻辑网格上作画，再按目标尺寸缩放。渲染时会额外做
+2 倍超采样并写入 devicePixelRatio，因此在高 DPI（125% / 150% 缩放）下
+依然是锐利的矢量效果，而不是被拉伸的位图。
 """
 
 from __future__ import annotations
@@ -9,7 +10,7 @@ from __future__ import annotations
 import math
 from functools import lru_cache
 
-from PySide6.QtCore import QPointF, QRectF, Qt
+from PySide6.QtCore import QPointF, QRectF, QSize, Qt
 from PySide6.QtGui import (
     QColor,
     QIcon,
@@ -20,7 +21,9 @@ from PySide6.QtGui import (
 )
 
 GRID = 24.0
-STROKE = 1.85
+STROKE = 2.0
+#: 超采样倍数：位图按 倍数 × 屏幕缩放 渲染，再交给 Qt 缩放显示
+SUPERSAMPLE = 2.0
 
 
 # ---------------------------------------------------------------------------
@@ -357,17 +360,29 @@ def _color_key(value) -> str:
     return str(value)
 
 
-@lru_cache(maxsize=512)
-def _pixmap_cached(name: str, size: int, color: str) -> QPixmap:
-    drawer = _DRAWERS.get(name)
-    canvas = QPixmap(size, size)
-    canvas.fill(Qt.GlobalColor.transparent)
-    if drawer is None:
-        return canvas
+def _screen_scale() -> float:
+    """屏幕缩放系数（125% 缩放为 1.25）；取不到时按 1.0 处理。"""
+    try:
+        from PySide6.QtGui import QGuiApplication
+
+        app = QGuiApplication.instance()
+        screen = app.primaryScreen() if app is not None else None
+        if screen is not None:
+            return max(1.0, float(screen.devicePixelRatio()))
+    except Exception:  # noqa: BLE001
+        pass
+    return 1.0
+
+
+def _render_scale() -> float:
+    return SUPERSAMPLE * _screen_scale()
+
+
+def _paint(canvas: QPixmap, drawer, color: str, device: int) -> None:
     painter = QPainter(canvas)
     painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
     painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
-    painter.scale(size / GRID, size / GRID)
+    painter.scale(device / GRID, device / GRID)
     pen = QPen(QColor(color))
     pen.setWidthF(STROKE)
     pen.setCapStyle(Qt.PenCapStyle.RoundCap)
@@ -378,29 +393,103 @@ def _pixmap_cached(name: str, size: int, color: str) -> QPixmap:
         drawer(painter)
     finally:
         painter.end()
+
+
+@lru_cache(maxsize=1024)
+def _pixmap_cached(name: str, size: int, color: str, scale: float) -> QPixmap:
+    drawer = _DRAWERS.get(name)
+    device = max(1, int(round(size * scale)))
+    canvas = QPixmap(device, device)
+    canvas.fill(Qt.GlobalColor.transparent)
+    if drawer is None:
+        return canvas
+    _paint(canvas, drawer, color, device)
+    canvas.setDevicePixelRatio(scale)
     return canvas
 
 
-def pixmap(name: str, size: int = 20, color="#e8e8f2") -> QPixmap:
+def pixmap(name: str, size: int = 20, color="#5f6368") -> QPixmap:
     """返回绘制好的图标位图（结果按名称/尺寸/颜色缓存）。
+
+    位图按 ``SUPERSAMPLE × 屏幕缩放`` 渲染并写入 devicePixelRatio，
+    因此显示时是下采样而不是拉伸，边缘更干净。
 
     color 可以是颜色字符串（#rrggbb / rgba(...)），也可以是 QColor。
     """
-    return _pixmap_cached(name, int(size), _color_key(color))
+    scroll = _render_scale()
+    return _pixmap_cached(name, int(size), _color_key(color), scroll)
 
 
-def icon(name: str, *, color="#e8e8f2", size: int = 20) -> QIcon:
-    """返回可直接给按钮/菜单使用的 QIcon。"""
-    return QIcon(pixmap(name, size, color))
+def icon(name: str, *, color="#5f6368", size: int = 20) -> QIcon:
+    """返回可直接给按钮/菜单使用的 QIcon（内置多档尺寸，避免被拉伸）。"""
+    result = QIcon()
+    wanted = sorted({size, 14, 16, 18, 20, 22, 24, 28, 32, 36, 40, 48, 64})
+    for px in wanted:
+        if px <= 0:
+            continue
+        result.addPixmap(pixmap(name, px, color))
+    return result
 
 
-def apply_icon(widget, name: str, *, color="#e8e8f2", size: int = 18) -> None:
-    """给按钮等控件设置图标。"""
+def apply_icon(widget, name: str, *, color="#5f6368", size: int = 18) -> None:
+    """给按钮等控件设置图标。
+
+    注意 iconSize 用逻辑像素（不是位图尺寸），否则高倍渲染的位图会被放大变糊。
+    """
     widget.setIcon(icon(name, color=color, size=size))
-    widget.setIconSize(pixmap(name, size, color).size())
+    widget.setIconSize(QSize(size, size))
 
 
-def cached_pixmap_str(name: str, size: int, color="#e8e8f2") -> str:
+# ---------------------------------------------------------------------------
+# 应用图标：几何化的矢量标记（比缩放位图清晰得多）
+# ---------------------------------------------------------------------------
+def _logo_mark(painter: QPainter) -> None:
+    """在 24x24 网格里画：圆角方块 + 白色播放三角。"""
+    painter.setPen(Qt.PenStyle.NoPen)
+    painter.setBrush(QColor("#1a73e8"))
+    painter.drawRoundedRect(QRectF(1.6, 1.6, 20.8, 20.8), 5.6, 5.6)
+    path = QPainterPath()
+    path.moveTo(9.9, 7.6)
+    path.lineTo(17.2, 12.0)
+    path.lineTo(9.9, 16.4)
+    path.closeSubpath()
+    painter.setBrush(QColor("#ffffff"))
+    painter.drawPath(path)
+
+
+@lru_cache(maxsize=32)
+def _logo_cached(size: int, scale: float) -> QPixmap:
+    device = max(1, int(round(size * scale)))
+    canvas = QPixmap(device, device)
+    canvas.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(canvas)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+    painter.scale(device / GRID, device / GRID)
+    try:
+        _logo_mark(painter)
+    finally:
+        painter.end()
+    canvas.setDevicePixelRatio(scale)
+    return canvas
+
+
+def logo_pixmap(size: int = 40) -> QPixmap:
+    """启动器标记（矢量绘制，任意尺寸都清晰）。"""
+    return _logo_cached(int(size), _render_scale())
+
+
+def logo_icon() -> QIcon:
+    """任务栏/窗口图标用的多尺寸 QIcon。"""
+    result = QIcon()
+    for px in (16, 20, 24, 32, 40, 48, 64, 128, 256):
+        result.addPixmap(logo_pixmap(px))
+    return result
+
+
+def cached_pixmap_str(name: str, size: int, color="#5f6368") -> str:
     """调试/测试用：确认图标被成功绘制（空图标会返回空字符串）。"""
     canvas = pixmap(name, size, color)
-    return "" if canvas.isNull() else f"{name}:{canvas.width()}x{canvas.height()}"
+    if canvas.isNull():
+        return ""
+    logical = canvas.deviceIndependentSize()
+    return f"{name}:{logical.width():.0f}x{logical.height():.0f}@{canvas.devicePixelRatio():g}x"

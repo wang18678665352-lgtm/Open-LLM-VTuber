@@ -49,7 +49,7 @@ class HomePage(QWidget):
         hero = card(margins=(22, 20, 22, 18), object_name="hero")
         hero_layout = card_layout(hero)
         hero_layout.setSpacing(16)
-        apply_shadow(hero, blur=40, dy=14, alpha=110, color="#05070f")
+        apply_shadow(hero, blur=28, dy=2, alpha=26)
 
         top = QHBoxLayout()
         top.setSpacing(20)
@@ -59,7 +59,9 @@ class HomePage(QWidget):
         )
         self.launch_button.setMinimumWidth(248)
         apply_icon(self.launch_button, "play", color="#ffffff", size=26)
-        self._launch_glow = glow(self.launch_button, color="#4f8cf7", blur=44, alpha=150)
+        self._launch_glow = glow(
+            self.launch_button, color=PALETTE["accent"], blur=20, alpha=70
+        )
         top.addWidget(self.launch_button)
 
         state_box = QVBoxLayout()
@@ -150,7 +152,7 @@ class HomePage(QWidget):
 
     # ------------------------------------------------------------------
     def _paint_state_dot(self, running: bool) -> None:
-        color = PALETTE["ok"] if running else PALETTE["subtle"]
+        color = PALETTE["ok"] if running else PALETTE["muted"]
         self.state_dot.setStyleSheet(f"background: {color}; border-radius: 4px;")
 
     def clear_console(self) -> None:
@@ -171,7 +173,7 @@ class HomePage(QWidget):
             self.launch_button.setProperty("variant", "launch")
             apply_icon(self.launch_button, "play", color="#ffffff", size=26)
             self.state_label.setText("未运行")
-            self._set_glow_color("#4f8cf7")
+            self._set_glow_color(PALETTE["accent"])
         self._paint_state_dot(running)
         restyle(self.launch_button)
         for box in self.option_boxes.values():
@@ -179,7 +181,7 @@ class HomePage(QWidget):
 
     def _set_glow_color(self, value: str) -> None:
         tint = QColor(value)
-        tint.setAlpha(150)
+        tint.setAlpha(70)
         self._launch_glow.setColor(tint)
 
     def refresh_addr(self) -> None:

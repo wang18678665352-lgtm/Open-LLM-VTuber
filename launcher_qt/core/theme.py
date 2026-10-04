@@ -1,4 +1,8 @@
-"""深色主题调色板、全局 QSS 与 Windows 原生窗口装饰。"""
+"""简约 Google / Material 风格主题：调色板、全局 QSS 与 Windows 原生窗口装饰。
+
+配色参考 Google Material 浅色主题：白色表面、#f8f9fa 背景、
+#1a73e8 主色、#5f6368 次要文字、#dadce0 描边，圆角与阴影都很克制。
+"""
 
 from __future__ import annotations
 
@@ -10,39 +14,48 @@ from PySide6.QtGui import QColor, QFont, QFontDatabase
 IS_WIN = sys.platform.startswith("win")
 
 PALETTE: dict[str, str] = {
-    "bg": "#17171f",
-    "window_top": "#1c1c27",
-    "window_bottom": "#111119",
-    "sidebar": "#121219",
-    "sidebar_top": "#171722",
-    "panel": "#1f1f2b",
-    "panel_top": "#22222f",
-    "panel_bottom": "#1b1b26",
-    "panel_alt": "#262636",
-    "fg": "#e8e8f2",
-    "subtle": "#9a9ab2",
-    "accent": "#3b82f6",
-    "accent_hover": "#5c9bff",
-    "accent_press": "#2f6ed4",
-    "accent2": "#7c5cf5",
-    "danger": "#e5484d",
-    "danger_hover": "#f06a6e",
-    "ok": "#4cc38a",
-    "warn": "#e5c07b",
-    "err": "#e06c75",
-    "info": "#56c8d8",
-    "debug": "#6b7280",
-    "console_bg": "#0d0d15",
-    "console_fg": "#d5d5e2",
-    "border": "#2c2c3c",
-    "border_soft": "rgba(255, 255, 255, 0.07)",
-    "launcher": "#7aa2f7",
-    "entry_bg": "#14141d",
-    "tray_border": "#3a3a4d",
-    "hero_a": "#243258",
-    "hero_b": "#2f2049",
-    "hover": "rgba(255, 255, 255, 0.07)",
-    "hover_strong": "rgba(255, 255, 255, 0.12)",
+    # 表面
+    "bg": "#f8f9fa",
+    "window_top": "#ffffff",
+    "window_bottom": "#f8f9fa",
+    "sidebar": "#ffffff",
+    "sidebar_top": "#ffffff",
+    "panel": "#ffffff",
+    "panel_top": "#ffffff",
+    "panel_bottom": "#ffffff",
+    "panel_alt": "#f1f3f4",
+    # 文字
+    "fg": "#202124",
+    "subtle": "#5f6368",
+    "muted": "#80868b",
+    # 主色
+    "accent": "#1a73e8",
+    "accent_hover": "#1765cc",
+    "accent_press": "#185abc",
+    "accent2": "#4285f4",
+    "accent_container": "#e8f0fe",
+    "accent_on_container": "#1967d2",
+    # 语义色
+    "danger": "#d93025",
+    "danger_hover": "#c5221f",
+    "ok": "#1e8e3e",
+    "warn": "#e37400",
+    "err": "#d93025",
+    "info": "#1a73e8",
+    "debug": "#80868b",
+    # 控制台与输入
+    "console_bg": "#f1f3f4",
+    "console_fg": "#3c4043",
+    "entry_bg": "#ffffff",
+    "border": "#dadce0",
+    "border_soft": "#e8eaed",
+    "tray_border": "#dadce0",
+    "launcher": "#1967d2",
+    "hero_a": "#ffffff",
+    "hero_b": "#ffffff",
+    "hover": "#f1f3f4",
+    "hover_strong": "#e8eaed",
+    "shadow": "rgba(60, 64, 67, 0.20)",
 }
 
 
@@ -60,10 +73,16 @@ def pick_font(candidates: tuple[str, ...], fallback: str) -> str:
 
 
 def ui_font_family() -> str:
+    """界面主字体：Segoe UI 最接近 Google 的 Roboto，中文由系统字体回退。"""
     return pick_font(
-        ("Microsoft YaHei UI", "Microsoft YaHei", "Segoe UI Variable Text", "Segoe UI"),
+        ("Segoe UI Variable Text", "Segoe UI", "Roboto", "Microsoft YaHei UI"),
         QFont().defaultFamily(),
     )
+
+
+def ui_font_stack() -> str:
+    """QSS 用的字体列表：西文走 Segoe UI/Roboto，中文回退到雅黑。"""
+    return '"Segoe UI Variable Text", "Segoe UI", Roboto, "Microsoft YaHei UI", "Microsoft YaHei"'
 
 
 def mono_font_family() -> str:
@@ -74,7 +93,7 @@ def mono_font_family() -> str:
 
 def build_stylesheet() -> str:
     p = PALETTE
-    ui = ui_font_family()
+    ui = ui_font_stack()
     mono = mono_font_family()
     assets = _widget_assets()
     return f"""
@@ -84,43 +103,41 @@ def build_stylesheet() -> str:
 QWidget {{
     background: transparent;
     color: {p["fg"]};
-    font-family: "{ui}";
+    font-family: {ui};
     font-size: 10pt;
 }}
 QLabel {{
     background: transparent;
 }}
 QMainWindow, QDialog {{
-    background: {p["window_bottom"]};
+    background: {p["bg"]};
 }}
 QToolTip {{
-    background: {p["panel_top"]};
-    color: {p["fg"]};
-    border: 1px solid {p["border_soft"]};
-    border-radius: 6px;
+    background: {p["console_fg"]};
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
     padding: 6px 9px;
 }}
 
 /* ---------- 内容区背景 ---------- */
 #content {{
-    background: qlineargradient(x1:0, y1:0, x2:0.35, y2:1,
-        stop:0 {p["window_top"]}, stop:1 {p["window_bottom"]});
+    background: {p["bg"]};
 }}
 
 /* ---------- 侧边栏 ---------- */
 #sidebar {{
-    background: qlineargradient(x1:0, y1:0, x2:0.4, y2:1,
-        stop:0 {p["sidebar_top"]}, stop:1 {p["sidebar"]});
+    background: {p["sidebar"]};
     border-right: 1px solid {p["border_soft"]};
 }}
 #sidebarTitle {{
-    color: #ffffff;
-    font-size: 12.5pt;
-    font-weight: 700;
+    color: {p["fg"]};
+    font-size: 12pt;
+    font-weight: 600;
     background: transparent;
 }}
 #sidebarSub {{
-    color: {p["subtle"]};
+    color: {p["muted"]};
     font-size: 8.5pt;
     background: transparent;
 }}
@@ -128,30 +145,27 @@ QToolTip {{
     background: transparent;
     color: {p["subtle"]};
     border: none;
-    border-left: 3px solid transparent;
-    border-radius: 9px;
+    border-radius: 8px;
     padding: 9px 12px;
     text-align: left;
-    font-size: 10.5pt;
+    font-size: 10pt;
 }}
 #navButton:hover {{
     background: {p["hover"]};
     color: {p["fg"]};
 }}
 #navButton:checked {{
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-        stop:0 rgba(59, 130, 246, 0.30), stop:1 rgba(124, 92, 245, 0.08));
-    border-left: 3px solid {p["accent"]};
-    color: #ffffff;
+    background: {p["accent_container"]};
+    color: {p["accent_on_container"]};
     font-weight: 600;
 }}
 #statusChip {{
-    background: rgba(255, 255, 255, 0.045);
-    border: 1px solid {p["border_soft"]};
-    border-radius: 9px;
+    background: {p["hover"]};
+    border: none;
+    border-radius: 8px;
 }}
 #statusDot {{
-    background: {p["subtle"]};
+    background: {p["muted"]};
     border-radius: 4px;
     min-width: 8px;
     max-width: 8px;
@@ -166,21 +180,19 @@ QToolTip {{
 
 /* ---------- 卡片与文字 ---------- */
 #card {{
-    background: qlineargradient(x1:0, y1:0, x2:0.25, y2:1,
-        stop:0 {p["panel_top"]}, stop:1 {p["panel_bottom"]});
+    background: {p["panel"]};
     border: 1px solid {p["border_soft"]};
     border-radius: 12px;
 }}
 #hero {{
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-        stop:0 {p["hero_a"]}, stop:0.55 #252a4d, stop:1 {p["hero_b"]});
-    border: 1px solid rgba(122, 162, 247, 0.22);
-    border-radius: 14px;
+    background: #f8fbff;
+    border: 1px solid #d2e3fc;
+    border-radius: 12px;
 }}
 #pageTitle {{
-    color: #ffffff;
-    font-size: 15pt;
-    font-weight: 700;
+    color: {p["fg"]};
+    font-size: 17pt;
+    font-weight: 500;
     background: transparent;
 }}
 #pageSub {{
@@ -203,48 +215,49 @@ QToolTip {{
     background: transparent;
 }}
 #bigState {{
-    color: #ffffff;
+    color: {p["fg"]};
     font-size: 15pt;
-    font-weight: 700;
+    font-weight: 600;
     background: transparent;
 }}
 #chip {{
-    background: rgba(0, 0, 0, 0.28);
-    border: 1px solid {p["border_soft"]};
-    border-radius: 7px;
-    color: #cfd6ea;
+    background: {p["hover"]};
+    border: none;
+    border-radius: 6px;
+    color: {p["console_fg"]};
     font-family: "{mono}";
     font-size: 9.5pt;
     padding: 4px 9px;
 }}
 #pill {{
-    background: rgba(255, 255, 255, 0.10);
-    border: 1px solid {p["border_soft"]};
+    background: {p["accent_container"]};
+    border: none;
     border-radius: 9px;
-    color: #ffffff;
+    color: {p["accent_on_container"]};
     font-size: 9pt;
     padding: 3px 10px;
 }}
 
 /* ---------- 按钮 ---------- */
 QPushButton {{
-    background: rgba(255, 255, 255, 0.055);
-    color: {p["fg"]};
-    border: 1px solid {p["border_soft"]};
-    border-radius: 9px;
+    background: {p["panel"]};
+    color: {p["accent"]};
+    border: 1px solid {p["border"]};
+    border-radius: 6px;
     padding: 7px 14px;
+    font-weight: 500;
 }}
 QPushButton:hover {{
-    background: {p["hover_strong"]};
-    border-color: rgba(255, 255, 255, 0.20);
+    background: #f6faff;
+    border-color: #c3d5f5;
 }}
 QPushButton:pressed {{
-    background: rgba(0, 0, 0, 0.28);
+    background: {p["accent_container"]};
 }}
 QPushButton:disabled {{
-    background: rgba(255, 255, 255, 0.03);
-    color: {p["subtle"]};
-    border-color: rgba(255, 255, 255, 0.05);
+    background: {p["panel"]};
+    color: #bdc1c6;
+    border-color: {p["border_soft"]};
 }}
 QPushButton[variant="ghost"] {{
     background: transparent;
@@ -257,71 +270,64 @@ QPushButton[variant="ghost"]:hover {{
     color: {p["fg"]};
 }}
 QPushButton[variant="accent"] {{
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-        stop:0 {p["accent"]}, stop:1 {p["accent2"]});
+    background: {p["accent"]};
     color: #ffffff;
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    font-weight: 600;
+    border: 1px solid transparent;
+    font-weight: 500;
     padding: 8px 16px;
 }}
 QPushButton[variant="accent"]:hover {{
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-        stop:0 {p["accent_hover"]}, stop:1 #8f74ff);
+    background: {p["accent_hover"]};
 }}
 QPushButton[variant="accent"]:pressed {{
     background: {p["accent_press"]};
 }}
 QPushButton[variant="launch"] {{
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-        stop:0 #4f8cf7, stop:0.55 #4a7bf6, stop:1 #6d5cf0);
+    background: {p["accent"]};
     color: #ffffff;
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    border-radius: 14px;
-    font-size: 16pt;
-    font-weight: 700;
-    padding: 26px 34px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    font-size: 15pt;
+    font-weight: 600;
+    padding: 22px 30px;
 }}
 QPushButton[variant="launch"]:hover {{
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-        stop:0 #62a0ff, stop:0.55 #5b8bff, stop:1 #8168ff);
+    background: {p["accent_hover"]};
 }}
 QPushButton[variant="launch"]:pressed {{
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-        stop:0 #3d76dd, stop:1 #5b4bd8);
+    background: {p["accent_press"]};
 }}
 QPushButton[variant="launchStop"] {{
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-        stop:0 #f05a60, stop:0.55 #e8484d, stop:1 #d8407a);
+    background: {p["danger"]};
     color: #ffffff;
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    border-radius: 14px;
-    font-size: 16pt;
-    font-weight: 700;
-    padding: 26px 34px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    font-size: 15pt;
+    font-weight: 600;
+    padding: 22px 30px;
 }}
 QPushButton[variant="launchStop"]:hover {{
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-        stop:0 #ff6f75, stop:1 #ec5590);
+    background: {p["danger_hover"]};
 }}
 QPushButton[variant="launchStop"]:pressed {{
-    background: #c93f44;
+    background: #a50e0e;
 }}
 
 /* ---------- 输入控件 ---------- */
 QLineEdit {{
     background: {p["entry_bg"]};
     color: {p["fg"]};
-    border: 1px solid {p["border_soft"]};
-    border-radius: 8px;
+    border: 1px solid {p["border"]};
+    border-radius: 6px;
     padding: 7px 10px;
-    selection-background-color: {p["accent"]};
+    selection-background-color: {p["accent_container"]};
+    selection-color: {p["fg"]};
 }}
 QLineEdit:hover {{
-    border-color: rgba(255, 255, 255, 0.18);
+    border-color: #bdc1c6;
 }}
 QLineEdit:focus {{
-    border-color: {p["accent"]};
-    background: #16161f;
+    border: 1px solid {p["accent"]};
 }}
 QCheckBox {{
     background: transparent;
@@ -329,74 +335,57 @@ QCheckBox {{
     spacing: 8px;
 }}
 QCheckBox:hover {{
-    color: #ffffff;
+    color: {p["accent"]};
 }}
 QCheckBox:disabled {{
-    color: {p["subtle"]};
-}}
-QCheckBox::indicator {{
-    width: 16px;
-    height: 16px;
-    border-radius: 5px;
-    border: 1px solid {p["tray_border"]};
-    background: {p["entry_bg"]};
-}}
-QCheckBox::indicator:hover {{
-    border-color: {p["accent"]};
-}}
-QCheckBox::indicator:checked {{
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-        stop:0 {p["accent"]}, stop:1 {p["accent2"]});
-    border-color: rgba(255, 255, 255, 0.35);
-}}
-QCheckBox::indicator:checked:disabled {{
-    background: {p["tray_border"]};
+    color: {p["muted"]};
 }}
 
 /* ---------- 控制台 / 环境信息 ---------- */
 #console {{
     background: {p["console_bg"]};
     color: {p["console_fg"]};
-    border: 1px solid {p["border_soft"]};
-    border-radius: 10px;
-    padding: 8px 10px;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 12px;
     font-family: "{mono}";
     font-size: 9.5pt;
-    selection-background-color: {p["accent"]};
+    selection-background-color: {p["accent_container"]};
+    selection-color: {p["fg"]};
 }}
 #envInfo {{
-    background: rgba(0, 0, 0, 0.22);
-    color: {p["fg"]};
-    border: 1px solid {p["border_soft"]};
-    border-radius: 10px;
-    padding: 8px 10px;
+    background: {p["console_bg"]};
+    color: {p["console_fg"]};
+    border: none;
+    border-radius: 8px;
+    padding: 10px 12px;
     font-family: "{mono}";
     font-size: 9.5pt;
 }}
 
 /* ---------- 表格 ---------- */
 QTreeWidget {{
-    background: rgba(0, 0, 0, 0.22);
-    alternate-background-color: rgba(255, 255, 255, 0.028);
+    background: {p["panel"]};
+    alternate-background-color: #fafbfc;
     color: {p["fg"]};
     border: 1px solid {p["border_soft"]};
-    border-radius: 10px;
-    padding: 4px;
+    border-radius: 8px;
+    padding: 2px;
 }}
 QTreeWidget::item {{
-    padding: 7px 4px;
+    padding: 8px 4px;
     border: none;
 }}
 QTreeWidget::item:selected {{
-    background: rgba(59, 130, 246, 0.22);
-    color: #ffffff;
+    background: {p["accent_container"]};
+    color: {p["fg"]};
 }}
 QHeaderView::section {{
     background: transparent;
     color: {p["subtle"]};
     border: none;
     border-bottom: 1px solid {p["border_soft"]};
-    padding: 7px 6px;
+    padding: 8px 6px;
     font-weight: 600;
 }}
 
@@ -407,12 +396,12 @@ QScrollBar:vertical {{
     margin: 2px;
 }}
 QScrollBar::handle:vertical {{
-    background: rgba(255, 255, 255, 0.16);
+    background: #dadce0;
     border-radius: 5px;
     min-height: 30px;
 }}
 QScrollBar::handle:vertical:hover {{
-    background: rgba(255, 255, 255, 0.30);
+    background: #bdc1c6;
 }}
 QScrollBar:horizontal {{
     background: transparent;
@@ -420,7 +409,7 @@ QScrollBar:horizontal {{
     margin: 2px;
 }}
 QScrollBar::handle:horizontal {{
-    background: rgba(255, 255, 255, 0.16);
+    background: #dadce0;
     border-radius: 5px;
     min-width: 30px;
 }}
@@ -434,19 +423,19 @@ QScrollBar::add-page, QScrollBar::sub-page {{
 
 /* ---------- 菜单（托盘） ---------- */
 QMenu {{
-    background: {p["panel_top"]};
+    background: {p["panel"]};
     color: {p["fg"]};
     border: 1px solid {p["border_soft"]};
-    border-radius: 10px;
-    padding: 5px;
+    border-radius: 8px;
+    padding: 6px;
 }}
 QMenu::item {{
     padding: 7px 20px;
-    border-radius: 7px;
+    border-radius: 6px;
 }}
 QMenu::item:selected {{
-    background: rgba(59, 130, 246, 0.30);
-    color: #ffffff;
+    background: {p["hover"]};
+    color: {p["fg"]};
 }}
 QMenu::separator {{
     height: 1px;
@@ -466,7 +455,7 @@ def _widget_assets() -> dict[str, str]:
     """把开关与下拉箭头画成 PNG 放到临时目录，供 QSS 的 image: url() 引用。
 
     QSS 不支持内联 SVG/绘制代码，用运行时渲染既保持了矢量观感，
-    又不需要往仓库里塞二进制资源。
+    又不需要往仓库里塞二进制资源。按 3 倍分辨率渲染，缩放后依然锐利。
     """
     global _WIDGET_ASSETS
     if _WIDGET_ASSETS is not None:
@@ -489,42 +478,43 @@ def _widget_assets() -> dict[str, str]:
             if pixmap.save(str(target), "PNG"):
                 result[name.split(".")[0]] = target.as_posix()
 
-        # 开关：关 / 开
+        # Material 3 开关：开（蓝底白钮）/ 关（灰底白钮）
         for state in (False, True):
-            scale = 2
-            width, height = 38 * scale, 21 * scale
+            scale = 3
+            width, height = 34 * scale, 19 * scale
             pixmap = QPixmap(width, height)
             pixmap.fill(Qt.GlobalColor.transparent)
             painter = QPainter(pixmap)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
             painter.setPen(Qt.PenStyle.NoPen)
-            track = QColor(PALETTE["accent"] if state else "#3a3a4d")
-            painter.setBrush(track)
-            radius = (height - 4) / 2
-            painter.drawRoundedRect(QRectF(2, 2, width - 4, height - 4), radius, radius)
-            knob = height - 10
-            left = (width - 5 - knob) if state else 5
-            painter.setBrush(QColor("#ffffff" if state else "#8f8fa6"))
-            painter.drawEllipse(QRectF(left, 5, knob, knob))
+            painter.setBrush(QColor(PALETTE["accent"] if state else "#dadce0"))
+            radius = (height - 2 * scale) / 2
+            painter.drawRoundedRect(
+                QRectF(scale, scale, width - 2 * scale, height - 2 * scale), radius, radius
+            )
+            knob = height - 8 * scale
+            left = (width - 4 * scale - knob) if state else 4 * scale
+            painter.setBrush(QColor("#ffffff"))
+            painter.drawEllipse(QRectF(left, 4 * scale, knob, knob))
             painter.end()
             save(f"switch_{'on' if state else 'off'}.png", pixmap)
 
         # 下拉箭头
-        scale = 3
+        scale = 4
         size = 24 * scale
         pixmap = QPixmap(size, size)
         pixmap.fill(Qt.GlobalColor.transparent)
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         pen = QPen(QColor(PALETTE["subtle"]))
-        pen.setWidthF(2.4 * scale)
+        pen.setWidthF(2.0 * scale)
         pen.setCapStyle(Qt.PenCapStyle.RoundCap)
         pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
         painter.setPen(pen)
         path = QPainterPath()
-        path.moveTo(7.4 * scale, 10.0 * scale)
+        path.moveTo(7.6 * scale, 10.2 * scale)
         path.lineTo(12.0 * scale, 14.6 * scale)
-        path.lineTo(16.6 * scale, 10.0 * scale)
+        path.lineTo(16.4 * scale, 10.2 * scale)
         painter.drawPath(path)
         painter.end()
         save("chevron.png", pixmap)
@@ -543,8 +533,8 @@ def _form_rules(p: dict[str, str], assets: dict[str, str]) -> str:
         f"""
 QComboBox#input::down-arrow {{
     image: url("{arrow}");
-    width: 13px;
-    height: 13px;
+    width: 12px;
+    height: 12px;
 }}
 """
         if arrow
@@ -569,28 +559,27 @@ QCheckBox::indicator:checked {{
     border: none;
 }}
 
-/* ---------- 分段选择器 ---------- */
+/* ---------- 分段选择器（Google 分段按钮） ---------- */
 #segmented {{
-    background: rgba(0, 0, 0, 0.28);
-    border: 1px solid {p["border_soft"]};
-    border-radius: 11px;
+    background: {p["hover"]};
+    border: none;
+    border-radius: 8px;
 }}
 #segButton {{
     background: transparent;
     color: {p["subtle"]};
     border: none;
-    border-radius: 8px;
+    border-radius: 7px;
     padding: 7px 20px;
     font-size: 10pt;
+    font-weight: 500;
 }}
 #segButton:hover {{
-    background: {p["hover"]};
     color: {p["fg"]};
 }}
 #segButton:checked {{
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-        stop:0 {p["accent"]}, stop:1 {p["accent2"]});
-    color: #ffffff;
+    background: {p["panel"]};
+    color: {p["accent"]};
     font-weight: 600;
 }}
 
@@ -598,11 +587,11 @@ QCheckBox::indicator:checked {{
 #formLabel {{
     color: {p["fg"]};
     font-size: 10pt;
-    font-weight: 600;
+    font-weight: 500;
     background: transparent;
 }}
 #fieldHint {{
-    color: {p["subtle"]};
+    color: {p["muted"]};
     font-size: 8.5pt;
     background: transparent;
 }}
@@ -612,7 +601,7 @@ QCheckBox::indicator:checked {{
     background: transparent;
 }}
 #sectionLabel {{
-    color: {p["launcher"]};
+    color: {p["accent"]};
     font-size: 9.5pt;
     font-weight: 600;
     background: transparent;
@@ -624,24 +613,25 @@ QCheckBox::indicator:checked {{
 }}
 QLineEdit#input, QComboBox#input, QPlainTextEdit#inputArea {{
     background: {p["entry_bg"]};
-    border: 1px solid {p["border_soft"]};
-    border-radius: 8px;
+    border: 1px solid {p["border"]};
+    border-radius: 6px;
     padding: 7px 10px;
     color: {p["fg"]};
-    selection-background-color: {p["accent"]};
+    selection-background-color: {p["accent_container"]};
+    selection-color: {p["fg"]};
 }}
 QLineEdit#input {{
     min-height: 19px;
 }}
 QLineEdit#input:hover, QComboBox#input:hover, QPlainTextEdit#inputArea:hover {{
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    border: 1px solid #bdc1c6;
 }}
 QLineEdit#input:focus, QComboBox#input:focus, QPlainTextEdit#inputArea:focus {{
     border: 1px solid {p["accent"]};
-    background: rgba(59, 130, 246, 0.08);
 }}
 QLineEdit#input:disabled {{
-    color: {p["subtle"]};
+    color: {p["muted"]};
+    background: {p["hover"]};
 }}
 QComboBox#input::drop-down {{
     width: 26px;
@@ -649,13 +639,14 @@ QComboBox#input::drop-down {{
     background: transparent;
 }}
 QComboBox#input QAbstractItemView {{
-    background: {p["panel_top"]};
+    background: {p["panel"]};
     color: {p["fg"]};
     border: 1px solid {p["border_soft"]};
     border-radius: 8px;
     padding: 4px;
     outline: 0;
-    selection-background-color: rgba(59, 130, 246, 0.30);
+    selection-background-color: {p["hover"]};
+    selection-color: {p["fg"]};
 }}
 {arrow_rule}
 /* ---------- 开关 ---------- */
@@ -674,9 +665,8 @@ QCheckBox::indicator:disabled {{
 {switch_rule}"""
 
 
-
 # ---------------------------------------------------------------------------
-# Windows 原生窗口装饰：深色标题栏 + Win11 圆角
+# Windows 原生窗口装饰：浅色标题栏 + Win11 圆角
 # ---------------------------------------------------------------------------
 
 _DWMWA_USE_IMMERSIVE_DARK_MODE = 20
@@ -684,8 +674,8 @@ _DWMWA_WINDOW_CORNER_PREFERENCE = 33
 _DWMWCP_ROUND = 2
 
 
-def apply_native_chrome(widget, dark: bool = True) -> None:
-    """让 Win10/11 的原生标题栏跟随深色主题，并启用 Win11 圆角。
+def apply_native_chrome(widget, dark: bool = False) -> None:
+    """让 Win10/11 的原生标题栏跟随主题（默认浅色），并启用 Win11 圆角。
 
     必须在窗口 ``show()`` 之后调用；失败时静默忽略（不影响功能）。
     """

@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -66,6 +67,9 @@ def page_header(title: str, subtitle: str = "") -> QWidget:
     layout.addWidget(page_title(title))
     if subtitle:
         layout.addWidget(label(subtitle, "pageSub"))
+    # 页面内容较高时不允许布局压缩标题（否则标题会被裁掉一截）；
+    # 垂直方向用 Fixed，让 Qt 在 QSS 生效后按真实 sizeHint 排版。
+    container.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
     return container
 
 
@@ -149,12 +153,12 @@ def set_button_icon(
 def apply_shadow(
     widget: QWidget,
     *,
-    blur: int = 36,
-    dy: int = 10,
-    alpha: int = 90,
-    color: str = "#000000",
+    blur: int = 24,
+    dy: int = 2,
+    alpha: int = 38,
+    color: str = "#3c4043",
 ) -> QGraphicsDropShadowEffect:
-    """给卡片/按钮加柔和投影，增加层次感。"""
+    """给卡片/按钮加克制的 Material 投影，增加层次感。"""
     effect = QGraphicsDropShadowEffect(widget)
     shadow_color = QColor(color)
     shadow_color.setAlpha(alpha)
@@ -165,9 +169,9 @@ def apply_shadow(
     return effect
 
 
-def glow(widget: QWidget, *, color: str = "#3b82f6", blur: int = 46, alpha: int = 130):
-    """强调用彩色光晕（用于主启动按钮）。"""
-    return apply_shadow(widget, blur=blur, dy=8, alpha=alpha, color=color)
+def glow(widget: QWidget, *, color: str = "#1a73e8", blur: int = 24, alpha: int = 60):
+    """强调用柔和投影（用于主启动按钮），风格上不做发光。"""
+    return apply_shadow(widget, blur=blur, dy=3, alpha=alpha, color=color)
 
 
 def row(*widgets: QWidget, spacing: int = 10, stretch_last: bool = False) -> QWidget:
@@ -196,22 +200,10 @@ def separator() -> QFrame:
 
 
 def logo_pixmap(size: int = 40):
-    """应用图标（用于侧边栏品牌区）。"""
-    from ..core.paths import ICON_PATH
+    """启动器标记（矢量绘制，任意尺寸都清晰）。"""
+    from ..core.icons import logo_pixmap as _logo
 
-    if not ICON_PATH.exists():
-        return None
-    from PySide6.QtGui import QPixmap
-
-    canvas = QPixmap(str(ICON_PATH))
-    if canvas.isNull():
-        return None
-    return canvas.scaled(
-        size,
-        size,
-        Qt.AspectRatioMode.KeepAspectRatio,
-        Qt.TransformationMode.SmoothTransformation,
-    )
+    return _logo(size)
 
 
 __all__ = [

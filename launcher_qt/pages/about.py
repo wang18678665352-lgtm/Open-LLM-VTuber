@@ -49,7 +49,7 @@ class AboutPage(QWidget):
 
         # ---- 品牌区 ----
         hero = card(object_name="hero", margins=(24, 22, 24, 22))
-        apply_shadow(hero, blur=40, dy=14, alpha=110, color="#05070f")
+        apply_shadow(hero, blur=28, dy=2, alpha=26)
         hero_layout = card_layout(hero)
         hero_layout.setSpacing(14)
 
@@ -68,7 +68,7 @@ class AboutPage(QWidget):
         brand_text.addWidget(
             label(f"启动器 v{APP_VERSION}　·　项目 v{project_version()}", "cardHint")
         )
-        brand_text.addWidget(label("仿绘世（秋叶）风格的本地服务图形化启动工具", "cardHint"))
+        brand_text.addWidget(label("简约风格的本地服务图形化启动工具", "cardHint"))
         brand.addLayout(brand_text)
         brand.addStretch(1)
         hero_layout.addLayout(brand)
@@ -100,18 +100,19 @@ class AboutPage(QWidget):
         note_layout.addWidget(label("说明", "cardTitle"))
         note_layout.addWidget(
             label(
-                "本版本使用 Qt6（PySide6）原生窗口与原生控件重写，可打包为单文件 exe，"
-                "无需额外安装 Python 运行环境。",
+                "本版本使用 Qt6（PySide6）原生窗口与原生控件重写，图标全部为矢量绘制，"
+                "可打包为单文件 exe，无需额外安装 Python 运行环境。",
                 "cardLabel",
             )
         )
-        note_layout.addWidget(
-            hint(
-                "界面灵感致敬 秋葉aaaki 的绘世启动器；本启动器为社区自制工具，"
-                "与 Open-LLM-VTuber 官方无关。",
-                card_scoped=True,
-            )
+        material_note = hint(
+            "界面采用简约的 Google Material 浅色风格（主色 #1a73e8），"
+            "所有图标与开关均为运行时绘制的矢量图形，不依赖位图素材。"
+            "本启动器为社区自制工具，与 Open-LLM-VTuber 官方无关。",
+            card_scoped=True,
         )
+        material_note.setWordWrap(True)
+        note_layout.addWidget(material_note)
 
         links = QHBoxLayout()
         links.setSpacing(10)

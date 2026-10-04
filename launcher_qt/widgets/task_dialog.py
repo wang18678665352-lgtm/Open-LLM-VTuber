@@ -72,7 +72,7 @@ class TaskDialog(QDialog):
 
     def showEvent(self, event) -> None:  # noqa: N802
         super().showEvent(event)
-        apply_native_chrome(self, dark=True)
+        apply_native_chrome(self, dark=False)
 
     def closeEvent(self, event) -> None:  # noqa: N802
         if self.sequence.is_running:

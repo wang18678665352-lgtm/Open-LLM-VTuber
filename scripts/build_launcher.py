@@ -27,7 +27,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS_DIR = ROOT / "launcher_qt" / "assets"
 ICON_PATH = ASSETS_DIR / "app.ico"
-FAVICON_PATH = ROOT / "frontend" / "favicon.ico"
 APP_NAME = "Open-LLM-VTuber-Launcher"
 ENTRY = ROOT / "run_launcher.py"
 
@@ -77,25 +76,22 @@ EXCLUDES = (
 
 
 def ensure_icon() -> None:
-    """launcher_qt/assets/app.ico 缺失时从 frontend/favicon.ico 生成多尺寸图标。"""
+    """launcher_qt/assets/app.ico 缺失时用矢量标记生成多尺寸图标。"""
     if ICON_PATH.exists():
         return
-    if not FAVICON_PATH.exists():
-        print(f"[警告] 未找到图标来源 {FAVICON_PATH}，将使用 PyInstaller 默认图标。")
-        return
     try:
-        from PIL import Image
+        from make_icon import main as make_icon_main
     except ImportError:
-        print("[警告] 未安装 Pillow，跳过图标生成（可先安装：pip install pillow）。")
-        return
-    ASSETS_DIR.mkdir(parents=True, exist_ok=True)
-    source = Image.open(FAVICON_PATH).convert("RGBA")
-    source.save(
-        ICON_PATH,
-        format="ICO",
-        sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)],
-    )
-    print(f"[图标] 已生成 {ICON_PATH.relative_to(ROOT)}")
+        try:
+            sys.path.insert(0, str(ROOT / "scripts"))
+            from make_icon import main as make_icon_main  # type: ignore[no-redef]
+        except ImportError:
+            print("[警告] 未找到 scripts/make_icon.py，将使用 PyInstaller 默认图标。")
+            return
+    try:
+        make_icon_main(["--output", str(ICON_PATH)])
+    except Exception as exc:  # noqa: BLE001 - 打包不应因图标失败而中断
+        print(f"[警告] 图标生成失败（{exc}），将使用 PyInstaller 默认图标。")
 
 
 def check_prerequisites() -> bool:

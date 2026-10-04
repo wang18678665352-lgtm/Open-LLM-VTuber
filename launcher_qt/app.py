@@ -13,7 +13,7 @@ from PySide6.QtCore import (
     QTimer,
     Signal,
 )
-from PySide6.QtGui import QAction, QIcon
+from PySide6.QtGui import QAction
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import (
     QButtonGroup,
@@ -26,7 +26,6 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QStackedWidget,
-    QStyle,
     QSystemTrayIcon,
     QVBoxLayout,
     QWidget,
@@ -34,8 +33,7 @@ from PySide6.QtWidgets import (
 
 from . import APP_NAME, APP_VERSION
 from .core.config import SETTINGS_DEFAULTS, load_settings, save_settings
-from .core.icons import apply_icon
-from .core.paths import ICON_PATH
+from .core.icons import apply_icon, logo_icon
 from .core.server import ServerController
 from .core.system import project_version
 from .core.theme import PALETTE, apply_native_chrome
@@ -49,8 +47,8 @@ from .widgets.common import apply_shadow, logo_pixmap
 
 SINGLE_INSTANCE_KEY = "Open-LLM-VTuber-Launcher-1"
 
-#: 运行中状态点的呼吸色（比 PALETTE["ok"] 暗一档）
-PULSE_DIM = "#2f7d5c"
+#: 运行中状态点的呼吸色（比 PALETTE["ok"] 浅一档）
+PULSE_DIM = "#81c995"
 
 #: (页面 key, 导航标题, 页面类, 导航图标)
 PAGES: tuple[tuple[str, str, type, str], ...] = (
@@ -117,8 +115,7 @@ class LauncherWindow(QMainWindow):
         self.setWindowTitle(APP_NAME)
         self.resize(1120, 740)
         self.setMinimumSize(980, 660)
-        if ICON_PATH.exists():
-            self.setWindowIcon(QIcon(str(ICON_PATH)))
+        self.setWindowIcon(logo_icon())
 
         self.server = ServerController(self)
         self.pages: dict[str, QWidget] = {}
@@ -211,18 +208,14 @@ class LauncherWindow(QMainWindow):
         chip_layout.addWidget(self.status_dot)
         chip_layout.addWidget(self.status_text)
         chip_layout.addStretch(1)
-        apply_shadow(chip, blur=24, dy=6, alpha=70)
+        apply_shadow(chip, blur=14, dy=1, alpha=20)
         layout.addWidget(chip)
         return sidebar
 
     def _build_tray(self) -> None:
         if not QSystemTrayIcon.isSystemTrayAvailable():
             return
-        if ICON_PATH.exists():
-            icon = QIcon(str(ICON_PATH))
-        else:
-            icon = self.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon)
-        self.tray = QSystemTrayIcon(icon, self)
+        self.tray = QSystemTrayIcon(logo_icon(), self)
 
         menu = QMenu(self)
         self.tray_show_action = QAction("显示主窗口", self)
@@ -284,7 +277,9 @@ class LauncherWindow(QMainWindow):
             nav = self.nav_buttons.get(key)
             if nav is None:
                 continue
-            color = "#ffffff" if key == active else PALETTE["subtle"]
+            color = (
+                PALETTE["accent_on_container"] if key == active else PALETTE["subtle"]
+            )
             apply_icon(nav, icon_name, color=color, size=18)
             nav.setIconSize(QSize(18, 18))
 
@@ -327,7 +322,7 @@ class LauncherWindow(QMainWindow):
             self._pulse_timer.start()
         else:
             self._pulse_timer.stop()
-            self.status_dot.setStyleSheet(self._dot_style(PALETTE["subtle"]))
+            self.status_dot.setStyleSheet(self._dot_style(PALETTE["muted"]))
         self.status_text.setText("运行中" if running else "未运行")
         self.status_text.setStyleSheet(
             f"color: {PALETTE['ok'] if running else PALETTE['subtle']};"
@@ -380,7 +375,7 @@ class LauncherWindow(QMainWindow):
         super().showEvent(event)
         if not self._chrome_applied:
             self._chrome_applied = True
-            apply_native_chrome(self, dark=True)
+            apply_native_chrome(self, dark=False)
 
     def closeEvent(self, event) -> None:  # noqa: N802
         if self._force_quit:

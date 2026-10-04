@@ -85,7 +85,7 @@ class SegmentedControl(QWidget):
             apply_icon(
                 button,
                 name,
-                color="#ffffff" if button.isChecked() else PALETTE["subtle"],
+                color=PALETTE["accent"] if button.isChecked() else PALETTE["subtle"],
                 size=16,
             )
 
