@@ -5,16 +5,23 @@ from __future__ import annotations
 import webbrowser
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QVBoxLayout, QWidget
+from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from ..core.config import server_url
+from ..core.icons import apply_icon, pixmap
+from ..core.theme import PALETTE
 from ..widgets.common import (
+    apply_shadow,
     button,
     card,
     card_layout,
+    chip,
+    glow,
     hint,
+    icon_button,
     label,
-    page_title,
+    page_header,
     restyle,
 )
 from ..widgets.console import ConsoleView
@@ -32,40 +39,66 @@ class HomePage(QWidget):
         self.window = window
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(18, 16, 18, 16)
-        layout.setSpacing(12)
-        layout.addWidget(page_title("一键启动"))
+        layout.setContentsMargins(22, 18, 22, 16)
+        layout.setSpacing(14)
+        layout.addWidget(
+            page_header("一键启动", "启动或停止本地服务，并实时查看运行日志")
+        )
 
-        # ---- 启动卡片 ----
-        launch_card = card(margins=(18, 18, 18, 18))
-        launch_layout = card_layout(launch_card)
-        launch_layout.setSpacing(12)
+        # ---- 启动卡片（渐变主视觉）----
+        hero = card(margins=(22, 20, 22, 18), object_name="hero")
+        hero_layout = card_layout(hero)
+        hero_layout.setSpacing(16)
+        apply_shadow(hero, blur=40, dy=14, alpha=110, color="#05070f")
 
         top = QHBoxLayout()
-        top.setSpacing(18)
+        top.setSpacing(20)
+
         self.launch_button = button(
             "一 键 启 动", variant="launch", on_click=window.toggle_server
         )
-        self.launch_button.setMinimumWidth(240)
+        self.launch_button.setMinimumWidth(248)
+        apply_icon(self.launch_button, "play", color="#ffffff", size=26)
+        self._launch_glow = glow(self.launch_button, color="#4f8cf7", blur=44, alpha=150)
         top.addWidget(self.launch_button)
 
         state_box = QVBoxLayout()
-        state_box.setSpacing(6)
-        self.state_label = label("状态：未运行", "bigState")
-        self.addr_label = label(f"地址：{server_url()}", "cardHint")
-        state_box.addWidget(self.state_label)
-        state_box.addWidget(self.addr_label)
+        state_box.setSpacing(4)
+        state_box.addWidget(label("服务状态", "cardHint"))
+
+        state_row = QHBoxLayout()
+        state_row.setSpacing(8)
+        self.state_dot = QLabel()
+        self.state_dot.setFixedSize(9, 9)
+        self._paint_state_dot(False)
+        self.state_label = label("未运行", "bigState")
+        state_row.addWidget(self.state_dot, 0, Qt.AlignmentFlag.AlignVCenter)
+        state_row.addWidget(self.state_label)
+        state_row.addStretch(1)
+        state_box.addLayout(state_row)
+
+        self.addr_label = chip(server_url())
+        self.addr_label.setToolTip("服务地址（可在「高级选项」中修改监听地址与端口）")
+        addr_row = QHBoxLayout()
+        addr_row.addWidget(self.addr_label)
+        addr_row.addStretch(1)
+        state_box.addLayout(addr_row)
         state_box.addStretch(1)
         top.addLayout(state_box, 1)
 
         self.open_button = button(
-            "打开网页", on_click=lambda: webbrowser.open(server_url())
+            "打开网页",
+            variant="accent",
+            on_click=lambda: webbrowser.open(server_url()),
+            icon_name="external",
+            icon_color="#ffffff",
+            icon_size=17,
         )
         top.addWidget(self.open_button, 0, Qt.AlignmentFlag.AlignTop)
-        launch_layout.addLayout(top)
+        hero_layout.addLayout(top)
 
         options_row = QHBoxLayout()
-        options_row.setSpacing(18)
+        options_row.setSpacing(20)
         self.option_boxes: dict[str, QCheckBox] = {}
         for key, text in OPTIONS:
             box = QCheckBox(text)
@@ -76,15 +109,20 @@ class HomePage(QWidget):
             self.option_boxes[key] = box
             options_row.addWidget(box)
         options_row.addStretch(1)
-        launch_layout.addLayout(options_row)
-        layout.addWidget(launch_card)
+        hero_layout.addLayout(options_row)
+        layout.addWidget(hero)
 
         # ---- 控制台卡片 ----
-        console_card = card(margins=(14, 12, 14, 14))
+        console_card = card(margins=(16, 14, 16, 14))
         console_layout = card_layout(console_card)
-        console_layout.setSpacing(8)
+        console_layout.setSpacing(10)
 
         toolbar = QHBoxLayout()
+        toolbar.setSpacing(8)
+        console_icon = QLabel()
+        console_icon.setPixmap(pixmap("terminal", 18, PALETTE["launcher"]))
+        console_icon.setFixedSize(18, 18)
+        toolbar.addWidget(console_icon)
         toolbar.addWidget(label("控制台输出", "cardTitle"))
         toolbar.addStretch(1)
         self.autoscroll_box = QCheckBox("自动滚动")
@@ -93,19 +131,28 @@ class HomePage(QWidget):
             lambda checked: self.window.set_option("autoscroll", checked)
         )
         toolbar.addWidget(self.autoscroll_box)
-        toolbar.addWidget(button("清空", on_click=self.clear_console))
+        toolbar.addWidget(
+            icon_button(
+                "trash",
+                text="清空",
+                on_click=self.clear_console,
+                tooltip="清空控制台输出",
+            )
+        )
         console_layout.addLayout(toolbar)
 
         self.console = ConsoleView()
         console_layout.addWidget(self.console, 1)
         layout.addWidget(console_card, 1)
 
-        tip = hint(
-            "提示：首次使用建议先在「疑难解答」页一键扫描，确认依赖与模型就绪。"
-        )
+        tip = hint("提示：首次使用建议先在「疑难解答」页一键扫描，确认依赖与模型就绪。")
         layout.addWidget(tip)
 
     # ------------------------------------------------------------------
+    def _paint_state_dot(self, running: bool) -> None:
+        color = PALETTE["ok"] if running else PALETTE["subtle"]
+        self.state_dot.setStyleSheet(f"background: {color}; border-radius: 4px;")
+
     def clear_console(self) -> None:
         self.console.clear_all()
 
@@ -116,17 +163,29 @@ class HomePage(QWidget):
         if running:
             self.launch_button.setText("终 止 运 行")
             self.launch_button.setProperty("variant", "launchStop")
-            self.state_label.setText("状态：运行中")
+            apply_icon(self.launch_button, "stop", color="#ffffff", size=24)
+            self.state_label.setText("运行中")
+            self._set_glow_color(PALETTE["danger"])
         else:
             self.launch_button.setText("一 键 启 动")
             self.launch_button.setProperty("variant", "launch")
-            self.state_label.setText("状态：未运行")
+            apply_icon(self.launch_button, "play", color="#ffffff", size=26)
+            self.state_label.setText("未运行")
+            self._set_glow_color("#4f8cf7")
+        self._paint_state_dot(running)
         restyle(self.launch_button)
         for box in self.option_boxes.values():
             box.setEnabled(not running)
 
+    def _set_glow_color(self, value: str) -> None:
+        tint = QColor(value)
+        tint.setAlpha(150)
+        self._launch_glow.setColor(tint)
+
     def refresh_addr(self) -> None:
-        self.addr_label.setText(f"地址：{server_url()}")
+        url = server_url()
+        self.addr_label.setText(url)
+        self.addr_label.setToolTip(f"{url}（可在「高级选项」中修改监听地址与端口）")
 
     def on_show(self) -> None:
         self.refresh_addr()

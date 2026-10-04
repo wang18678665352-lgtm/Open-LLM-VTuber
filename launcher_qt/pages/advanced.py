@@ -20,15 +20,23 @@ from PySide6.QtWidgets import (
 from ..core.config import conf_get, conf_set, server_url
 from ..core.paths import CONF_PATH, ROOT
 from ..core.system import env_info_lines, open_path
-from ..widgets.common import button, card, card_layout, hint, label, page_title
+from ..widgets.common import (
+    button,
+    card,
+    card_layout,
+    hint,
+    icon_button,
+    label,
+    page_header,
+)
 
-SHORTCUTS: tuple[tuple[str, object], ...] = (
-    ("编辑 conf.yaml", CONF_PATH),
-    ("打开项目目录", ROOT),
-    ("角色配置目录", ROOT / "characters"),
-    ("日志目录", ROOT / "logs"),
-    ("模型目录", ROOT / "models"),
-    ("打开前端页面", None),  # 特殊处理：走浏览器
+SHORTCUTS: tuple[tuple[str, object, str], ...] = (
+    ("编辑 conf.yaml", CONF_PATH, "file"),
+    ("打开项目目录", ROOT, "folder"),
+    ("角色配置目录", ROOT / "characters", "folder"),
+    ("日志目录", ROOT / "logs", "folder"),
+    ("模型目录", ROOT / "models", "package"),
+    ("打开前端页面", None, "globe"),  # 特殊处理：走浏览器
 )
 
 
@@ -41,9 +49,11 @@ class AdvancedPage(QWidget):
         self.envInfoReady.connect(self._apply_env_info)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(18, 16, 18, 16)
-        layout.setSpacing(12)
-        layout.addWidget(page_title("高级选项"))
+        layout.setContentsMargins(22, 18, 22, 16)
+        layout.setSpacing(14)
+        layout.addWidget(
+            page_header("高级选项", "修改监听地址与端口、快速打开常用目录、查看运行环境")
+        )
 
         # ---- 服务器设置 ----
         server_card = card(margins=(16, 16, 16, 16))
@@ -64,7 +74,9 @@ class AdvancedPage(QWidget):
         form.addWidget(self.port_edit)
         form.addSpacing(8)
         form.addWidget(button("保存设置", variant="accent", on_click=self.save))
-        form.addWidget(button("重新读取", on_click=self.reload))
+        form.addWidget(
+            icon_button("refresh", text="重新读取", on_click=self.reload, tooltip="从 conf.yaml 重新读取")
+        )
         form.addStretch(1)
         server_layout.addLayout(form)
         server_layout.addWidget(
@@ -83,12 +95,16 @@ class AdvancedPage(QWidget):
         grid = QGridLayout()
         grid.setHorizontalSpacing(10)
         grid.setVerticalSpacing(8)
-        for index, (text, target) in enumerate(SHORTCUTS):
+        for index, (text, target, icon_name) in enumerate(SHORTCUTS):
             if target is None:
                 handler = lambda: webbrowser.open(server_url())  # noqa: E731
             else:
                 handler = lambda _=False, path=target: open_path(path)  # noqa: E731
-            grid.addWidget(button(text, on_click=handler), index // 3, index % 3)
+            grid.addWidget(
+                button(text, on_click=handler, icon_name=icon_name, icon_size=17),
+                index // 3,
+                index % 3,
+            )
         for column in range(3):
             grid.setColumnStretch(column, 1)
         shortcut_layout.addLayout(grid)
@@ -120,7 +136,9 @@ class AdvancedPage(QWidget):
         header = QHBoxLayout()
         header.addWidget(label("环境信息", "cardTitle"))
         header.addStretch(1)
-        header.addWidget(button("刷新", on_click=self.refresh_env))
+        header.addWidget(
+            icon_button("refresh", text="刷新", on_click=self.refresh_env, tooltip="重新收集环境信息")
+        )
         env_layout.addLayout(header)
 
         self.env_view = QPlainTextEdit()

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QEvent, QObject, Qt, Signal
+from PySide6.QtCore import QEvent, QObject, QSize, Qt, Signal
 from PySide6.QtGui import QAction, QIcon
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import (
@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 
 from . import APP_NAME, APP_VERSION
 from .core.config import SETTINGS_DEFAULTS, load_settings, save_settings
+from .core.icons import apply_icon
 from .core.paths import ICON_PATH
 from .core.server import ServerController
 from .core.system import project_version
@@ -32,15 +33,17 @@ from .pages.advanced import AdvancedPage
 from .pages.home import HomePage
 from .pages.troubleshoot import TroubleshootPage
 from .pages.version import VersionPage
+from .widgets.common import apply_shadow, logo_pixmap
 
 SINGLE_INSTANCE_KEY = "Open-LLM-VTuber-Launcher-1"
 
-PAGES: tuple[tuple[str, str, type], ...] = (
-    ("home", "一键启动", HomePage),
-    ("advanced", "高级选项", AdvancedPage),
-    ("version", "版本管理", VersionPage),
-    ("troubleshoot", "疑难解答", TroubleshootPage),
-    ("about", "关于", AboutPage),
+#: (页面 key, 导航标题, 页面类, 导航图标)
+PAGES: tuple[tuple[str, str, type, str], ...] = (
+    ("home", "一键启动", HomePage, "play"),
+    ("advanced", "高级选项", AdvancedPage, "settings"),
+    ("version", "版本管理", VersionPage, "branch"),
+    ("troubleshoot", "疑难解答", TroubleshootPage, "scan"),
+    ("about", "关于", AboutPage, "info"),
 )
 
 
@@ -90,8 +93,8 @@ class LauncherWindow(QMainWindow):
         self.tray: QSystemTrayIcon | None = None
 
         self.setWindowTitle(APP_NAME)
-        self.resize(1040, 680)
-        self.setMinimumSize(920, 600)
+        self.resize(1120, 740)
+        self.setMinimumSize(980, 660)
         if ICON_PATH.exists():
             self.setWindowIcon(QIcon(str(ICON_PATH)))
 
@@ -111,13 +114,14 @@ class LauncherWindow(QMainWindow):
     # ------------------------------------------------------------------
     def _build_ui(self) -> None:
         central = QWidget()
+        central.setObjectName("content")
         layout = QHBoxLayout(central)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         layout.addWidget(self._build_sidebar())
 
         self.stack = QStackedWidget()
-        for key, _title, factory in PAGES:
+        for key, _title, factory, _icon in PAGES:
             page = factory(self)
             self.pages[key] = page
             self.stack.addWidget(page)
@@ -127,27 +131,44 @@ class LauncherWindow(QMainWindow):
     def _build_sidebar(self) -> QFrame:
         sidebar = QFrame()
         sidebar.setObjectName("sidebar")
-        sidebar.setFixedWidth(210)
+        sidebar.setFixedWidth(240)
         layout = QVBoxLayout(sidebar)
-        layout.setContentsMargins(16, 20, 16, 14)
+        layout.setContentsMargins(14, 18, 14, 14)
         layout.setSpacing(6)
 
+        # ---- 品牌区：图标 + 名称 + 版本 ----
+        brand = QHBoxLayout()
+        brand.setSpacing(10)
+        logo = QLabel()
+        logo.setFixedSize(38, 38)
+        pixmap = logo_pixmap(38)
+        if pixmap is not None:
+            logo.setPixmap(pixmap)
+        brand.addWidget(logo)
+
+        brand_text = QVBoxLayout()
+        brand_text.setSpacing(0)
         title = QLabel("Open-LLM-VTuber")
         title.setObjectName("sidebarTitle")
-        layout.addWidget(title)
-
-        subtitle = QLabel(f"启动器 v{APP_VERSION}\n项目 v{project_version()}")
+        subtitle = QLabel(f"启动器 v{APP_VERSION} · 项目 v{project_version()}")
         subtitle.setObjectName("sidebarSub")
-        layout.addWidget(subtitle)
-        layout.addSpacing(18)
+        brand_text.addWidget(title)
+        brand_text.addWidget(subtitle)
+        brand.addLayout(brand_text)
+        brand.addStretch(1)
+        layout.addLayout(brand)
+        layout.addSpacing(16)
 
+        # ---- 导航 ----
         group = QButtonGroup(self)
         group.setExclusive(True)
-        for key, text, _factory in PAGES:
+        for key, text, _factory, icon_name in PAGES:
             nav = QPushButton(text)
             nav.setObjectName("navButton")
             nav.setCheckable(True)
             nav.setCursor(Qt.CursorShape.PointingHandCursor)
+            nav.setIconSize(QSize(18, 18))
+            apply_icon(nav, icon_name, color=PALETTE["subtle"], size=18)
             nav.clicked.connect(lambda _checked=False, name=key: self.show_page(name))
             group.addButton(nav)
             self.nav_buttons[key] = nav
@@ -155,17 +176,21 @@ class LauncherWindow(QMainWindow):
 
         layout.addStretch(1)
 
-        status = QHBoxLayout()
-        status.setSpacing(8)
-        self.status_dot = QLabel("●")
+        # ---- 底部状态药丸 ----
+        chip = QFrame()
+        chip.setObjectName("statusChip")
+        chip_layout = QHBoxLayout(chip)
+        chip_layout.setContentsMargins(10, 8, 10, 8)
+        chip_layout.setSpacing(8)
+        self.status_dot = QLabel()
         self.status_dot.setObjectName("statusDot")
-        self.status_dot.setStyleSheet(f"color: {PALETTE['subtle']};")
         self.status_text = QLabel("未运行")
         self.status_text.setObjectName("statusText")
-        status.addWidget(self.status_dot)
-        status.addWidget(self.status_text)
-        status.addStretch(1)
-        layout.addLayout(status)
+        chip_layout.addWidget(self.status_dot)
+        chip_layout.addWidget(self.status_text)
+        chip_layout.addStretch(1)
+        apply_shadow(chip, blur=24, dy=6, alpha=70)
+        layout.addWidget(chip)
         return sidebar
 
     def _build_tray(self) -> None:
@@ -205,9 +230,20 @@ class LauncherWindow(QMainWindow):
         button = self.nav_buttons.get(key)
         if button is not None:
             button.setChecked(True)
+        self._refresh_nav_icons(key)
         on_show = getattr(page, "on_show", None)
         if callable(on_show):
             on_show()
+
+    def _refresh_nav_icons(self, active: str) -> None:
+        """选中项用高亮色图标，其余用弱化色。"""
+        for key, _text, _factory, icon_name in PAGES:
+            nav = self.nav_buttons.get(key)
+            if nav is None:
+                continue
+            color = "#ffffff" if key == active else PALETTE["subtle"]
+            apply_icon(nav, icon_name, color=color, size=18)
+            nav.setIconSize(QSize(18, 18))
 
     def set_option(self, name: str, checked: bool) -> None:
         self.options[name] = bool(checked)
@@ -231,9 +267,15 @@ class LauncherWindow(QMainWindow):
         if home is not None and hasattr(home, "set_running"):
             home.set_running(running)
         self.status_dot.setStyleSheet(
-            f"color: {PALETTE['ok'] if running else PALETTE['subtle']};"
+            "border-radius: 4px; min-width: 8px; max-width: 8px;"
+            " min-height: 8px; max-height: 8px; background: "
+            + (PALETTE["ok"] if running else PALETTE["subtle"])
+            + ";"
         )
         self.status_text.setText("运行中" if running else "未运行")
+        self.status_text.setStyleSheet(
+            f"color: {PALETTE['ok'] if running else PALETTE['subtle']};"
+        )
         if self.tray is not None:
             self.tray_toggle_action.setText("终止运行" if running else "一键启动")
             self.tray.setToolTip(f"{APP_NAME} · {'运行中' if running else '未运行'}")

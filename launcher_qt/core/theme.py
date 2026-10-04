@@ -11,14 +11,20 @@ IS_WIN = sys.platform.startswith("win")
 
 PALETTE: dict[str, str] = {
     "bg": "#17171f",
+    "window_top": "#1c1c27",
+    "window_bottom": "#111119",
     "sidebar": "#121219",
+    "sidebar_top": "#171722",
     "panel": "#1f1f2b",
+    "panel_top": "#22222f",
+    "panel_bottom": "#1b1b26",
     "panel_alt": "#262636",
     "fg": "#e8e8f2",
     "subtle": "#9a9ab2",
     "accent": "#3b82f6",
     "accent_hover": "#5c9bff",
     "accent_press": "#2f6ed4",
+    "accent2": "#7c5cf5",
     "danger": "#e5484d",
     "danger_hover": "#f06a6e",
     "ok": "#4cc38a",
@@ -26,12 +32,17 @@ PALETTE: dict[str, str] = {
     "err": "#e06c75",
     "info": "#56c8d8",
     "debug": "#6b7280",
-    "console_bg": "#0f0f16",
+    "console_bg": "#0d0d15",
     "console_fg": "#d5d5e2",
     "border": "#2c2c3c",
+    "border_soft": "rgba(255, 255, 255, 0.07)",
     "launcher": "#7aa2f7",
     "entry_bg": "#14141d",
     "tray_border": "#3a3a4d",
+    "hero_a": "#243258",
+    "hero_b": "#2f2049",
+    "hover": "rgba(255, 255, 255, 0.07)",
+    "hover_strong": "rgba(255, 255, 255, 0.12)",
 }
 
 
@@ -63,63 +74,88 @@ def mono_font_family() -> str:
 
 def build_stylesheet() -> str:
     p = PALETTE
+    ui = ui_font_family()
+    mono = mono_font_family()
     return f"""
 * {{
     outline: 0;
 }}
 QWidget {{
-    background: {p["bg"]};
+    background: transparent;
     color: {p["fg"]};
-    font-family: "{ui_font_family()}";
+    font-family: "{ui}";
     font-size: 10pt;
 }}
+QLabel {{
+    background: transparent;
+}}
 QMainWindow, QDialog {{
-    background: {p["bg"]};
+    background: {p["window_bottom"]};
 }}
 QToolTip {{
-    background: {p["panel_alt"]};
+    background: {p["panel_top"]};
     color: {p["fg"]};
-    border: 1px solid {p["border"]};
-    padding: 6px 8px;
+    border: 1px solid {p["border_soft"]};
+    border-radius: 6px;
+    padding: 6px 9px;
+}}
+
+/* ---------- 内容区背景 ---------- */
+#content {{
+    background: qlineargradient(x1:0, y1:0, x2:0.35, y2:1,
+        stop:0 {p["window_top"]}, stop:1 {p["window_bottom"]});
 }}
 
 /* ---------- 侧边栏 ---------- */
 #sidebar {{
-    background: {p["sidebar"]};
-    border-right: 1px solid {p["border"]};
+    background: qlineargradient(x1:0, y1:0, x2:0.4, y2:1,
+        stop:0 {p["sidebar_top"]}, stop:1 {p["sidebar"]});
+    border-right: 1px solid {p["border_soft"]};
 }}
 #sidebarTitle {{
-    color: {p["fg"]};
-    font-size: 14pt;
-    font-weight: 600;
+    color: #ffffff;
+    font-size: 12.5pt;
+    font-weight: 700;
     background: transparent;
 }}
 #sidebarSub {{
     color: {p["subtle"]};
-    font-size: 9pt;
+    font-size: 8.5pt;
     background: transparent;
 }}
 #navButton {{
     background: transparent;
-    color: {p["fg"]};
+    color: {p["subtle"]};
     border: none;
-    border-radius: 8px;
-    padding: 10px 14px;
+    border-left: 3px solid transparent;
+    border-radius: 9px;
+    padding: 9px 12px;
     text-align: left;
     font-size: 10.5pt;
 }}
 #navButton:hover {{
-    background: {p["panel_alt"]};
+    background: {p["hover"]};
+    color: {p["fg"]};
 }}
 #navButton:checked {{
-    background: {p["accent"]};
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 rgba(59, 130, 246, 0.30), stop:1 rgba(124, 92, 245, 0.08));
+    border-left: 3px solid {p["accent"]};
     color: #ffffff;
     font-weight: 600;
 }}
+#statusChip {{
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid {p["border_soft"]};
+    border-radius: 9px;
+}}
 #statusDot {{
-    color: {p["subtle"]};
-    font-size: 13pt;
-    background: transparent;
+    background: {p["subtle"]};
+    border-radius: 4px;
+    min-width: 8px;
+    max-width: 8px;
+    min-height: 8px;
+    max-height: 8px;
 }}
 #statusText {{
     color: {p["subtle"]};
@@ -129,18 +165,31 @@ QToolTip {{
 
 /* ---------- 卡片与文字 ---------- */
 #card {{
-    background: {p["panel"]};
-    border: 1px solid {p["border"]};
-    border-radius: 10px;
+    background: qlineargradient(x1:0, y1:0, x2:0.25, y2:1,
+        stop:0 {p["panel_top"]}, stop:1 {p["panel_bottom"]});
+    border: 1px solid {p["border_soft"]};
+    border-radius: 12px;
+}}
+#hero {{
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 {p["hero_a"]}, stop:0.55 #252a4d, stop:1 {p["hero_b"]});
+    border: 1px solid rgba(122, 162, 247, 0.22);
+    border-radius: 14px;
 }}
 #pageTitle {{
-    color: {p["fg"]};
-    font-size: 16pt;
+    color: #ffffff;
+    font-size: 15pt;
     font-weight: 700;
+    background: transparent;
+}}
+#pageSub {{
+    color: {p["subtle"]};
+    font-size: 9.5pt;
+    background: transparent;
 }}
 #cardTitle {{
     color: {p["fg"]};
-    font-size: 11pt;
+    font-size: 10.5pt;
     font-weight: 600;
     background: transparent;
 }}
@@ -153,88 +202,133 @@ QToolTip {{
     background: transparent;
 }}
 #bigState {{
-    color: {p["fg"]};
-    font-size: 12pt;
-    font-weight: 600;
+    color: #ffffff;
+    font-size: 15pt;
+    font-weight: 700;
     background: transparent;
+}}
+#chip {{
+    background: rgba(0, 0, 0, 0.28);
+    border: 1px solid {p["border_soft"]};
+    border-radius: 7px;
+    color: #cfd6ea;
+    font-family: "{mono}";
+    font-size: 9.5pt;
+    padding: 4px 9px;
+}}
+#pill {{
+    background: rgba(255, 255, 255, 0.10);
+    border: 1px solid {p["border_soft"]};
+    border-radius: 9px;
+    color: #ffffff;
+    font-size: 9pt;
+    padding: 3px 10px;
 }}
 
 /* ---------- 按钮 ---------- */
 QPushButton {{
-    background: {p["panel_alt"]};
+    background: rgba(255, 255, 255, 0.055);
     color: {p["fg"]};
-    border: 1px solid {p["border"]};
-    border-radius: 8px;
+    border: 1px solid {p["border_soft"]};
+    border-radius: 9px;
     padding: 7px 14px;
 }}
 QPushButton:hover {{
-    background: {p["border"]};
+    background: {p["hover_strong"]};
+    border-color: rgba(255, 255, 255, 0.20);
 }}
 QPushButton:pressed {{
-    background: {p["panel"]};
+    background: rgba(0, 0, 0, 0.28);
 }}
 QPushButton:disabled {{
-    background: {p["panel"]};
+    background: rgba(255, 255, 255, 0.03);
     color: {p["subtle"]};
-    border-color: {p["panel"]};
+    border-color: rgba(255, 255, 255, 0.05);
+}}
+QPushButton[variant="ghost"] {{
+    background: transparent;
+    border: 1px solid transparent;
+    color: {p["subtle"]};
+    padding: 6px 10px;
+}}
+QPushButton[variant="ghost"]:hover {{
+    background: {p["hover"]};
+    color: {p["fg"]};
 }}
 QPushButton[variant="accent"] {{
-    background: {p["accent"]};
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 {p["accent"]}, stop:1 {p["accent2"]});
     color: #ffffff;
-    border: 1px solid {p["accent"]};
+    border: 1px solid rgba(255, 255, 255, 0.16);
     font-weight: 600;
+    padding: 8px 16px;
 }}
 QPushButton[variant="accent"]:hover {{
-    background: {p["accent_hover"]};
-    border-color: {p["accent_hover"]};
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 {p["accent_hover"]}, stop:1 #8f74ff);
 }}
 QPushButton[variant="accent"]:pressed {{
     background: {p["accent_press"]};
 }}
 QPushButton[variant="launch"] {{
-    background: {p["accent"]};
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 #4f8cf7, stop:0.55 #4a7bf6, stop:1 #6d5cf0);
     color: #ffffff;
-    border: none;
-    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 14px;
     font-size: 16pt;
     font-weight: 700;
-    padding: 28px 36px;
+    padding: 26px 34px;
 }}
 QPushButton[variant="launch"]:hover {{
-    background: {p["accent_hover"]};
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 #62a0ff, stop:0.55 #5b8bff, stop:1 #8168ff);
 }}
 QPushButton[variant="launch"]:pressed {{
-    background: {p["accent_press"]};
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 #3d76dd, stop:1 #5b4bd8);
 }}
 QPushButton[variant="launchStop"] {{
-    background: {p["danger"]};
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 #f05a60, stop:0.55 #e8484d, stop:1 #d8407a);
     color: #ffffff;
-    border: none;
-    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 14px;
     font-size: 16pt;
     font-weight: 700;
-    padding: 28px 36px;
+    padding: 26px 34px;
 }}
 QPushButton[variant="launchStop"]:hover {{
-    background: {p["danger_hover"]};
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 #ff6f75, stop:1 #ec5590);
+}}
+QPushButton[variant="launchStop"]:pressed {{
+    background: #c93f44;
 }}
 
 /* ---------- 输入控件 ---------- */
 QLineEdit {{
     background: {p["entry_bg"]};
     color: {p["fg"]};
-    border: 1px solid {p["border"]};
-    border-radius: 6px;
-    padding: 6px 8px;
+    border: 1px solid {p["border_soft"]};
+    border-radius: 8px;
+    padding: 7px 10px;
     selection-background-color: {p["accent"]};
+}}
+QLineEdit:hover {{
+    border-color: rgba(255, 255, 255, 0.18);
 }}
 QLineEdit:focus {{
     border-color: {p["accent"]};
+    background: #16161f;
 }}
 QCheckBox {{
     background: transparent;
     color: {p["fg"]};
     spacing: 8px;
+}}
+QCheckBox:hover {{
+    color: #ffffff;
 }}
 QCheckBox:disabled {{
     color: {p["subtle"]};
@@ -242,7 +336,7 @@ QCheckBox:disabled {{
 QCheckBox::indicator {{
     width: 16px;
     height: 16px;
-    border-radius: 4px;
+    border-radius: 5px;
     border: 1px solid {p["tray_border"]};
     background: {p["entry_bg"]};
 }}
@@ -250,51 +344,57 @@ QCheckBox::indicator:hover {{
     border-color: {p["accent"]};
 }}
 QCheckBox::indicator:checked {{
-    background: {p["accent"]};
-    border-color: {p["accent"]};
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 {p["accent"]}, stop:1 {p["accent2"]});
+    border-color: rgba(255, 255, 255, 0.35);
+}}
+QCheckBox::indicator:checked:disabled {{
+    background: {p["tray_border"]};
 }}
 
-/* ---------- 控制台 ---------- */
+/* ---------- 控制台 / 环境信息 ---------- */
 #console {{
     background: {p["console_bg"]};
     color: {p["console_fg"]};
-    border: 1px solid {p["border"]};
-    border-radius: 8px;
-    padding: 6px;
-    font-family: "{mono_font_family()}";
+    border: 1px solid {p["border_soft"]};
+    border-radius: 10px;
+    padding: 8px 10px;
+    font-family: "{mono}";
     font-size: 9.5pt;
     selection-background-color: {p["accent"]};
 }}
 #envInfo {{
-    background: {p["panel"]};
+    background: rgba(0, 0, 0, 0.22);
     color: {p["fg"]};
-    border: none;
-    font-family: "{mono_font_family()}";
+    border: 1px solid {p["border_soft"]};
+    border-radius: 10px;
+    padding: 8px 10px;
+    font-family: "{mono}";
     font-size: 9.5pt;
 }}
 
 /* ---------- 表格 ---------- */
 QTreeWidget {{
-    background: {p["panel"]};
-    alternate-background-color: {p["panel_alt"]};
+    background: rgba(0, 0, 0, 0.22);
+    alternate-background-color: rgba(255, 255, 255, 0.028);
     color: {p["fg"]};
-    border: 1px solid {p["border"]};
-    border-radius: 8px;
-    gridline-color: {p["border"]};
+    border: 1px solid {p["border_soft"]};
+    border-radius: 10px;
+    padding: 4px;
 }}
 QTreeWidget::item {{
-    padding: 5px 4px;
+    padding: 7px 4px;
+    border: none;
 }}
 QTreeWidget::item:selected {{
-    background: {p["accent"]};
+    background: rgba(59, 130, 246, 0.22);
     color: #ffffff;
 }}
 QHeaderView::section {{
-    background: {p["panel_alt"]};
-    color: {p["fg"]};
+    background: transparent;
+    color: {p["subtle"]};
     border: none;
-    border-right: 1px solid {p["border"]};
-    border-bottom: 1px solid {p["border"]};
+    border-bottom: 1px solid {p["border_soft"]};
     padding: 7px 6px;
     font-weight: 600;
 }}
@@ -302,26 +402,26 @@ QHeaderView::section {{
 /* ---------- 滚动条 ---------- */
 QScrollBar:vertical {{
     background: transparent;
-    width: 12px;
+    width: 11px;
     margin: 2px;
 }}
 QScrollBar::handle:vertical {{
-    background: {p["tray_border"]};
+    background: rgba(255, 255, 255, 0.16);
     border-radius: 5px;
-    min-height: 28px;
+    min-height: 30px;
 }}
 QScrollBar::handle:vertical:hover {{
-    background: {p["subtle"]};
+    background: rgba(255, 255, 255, 0.30);
 }}
 QScrollBar:horizontal {{
     background: transparent;
-    height: 12px;
+    height: 11px;
     margin: 2px;
 }}
 QScrollBar::handle:horizontal {{
-    background: {p["tray_border"]};
+    background: rgba(255, 255, 255, 0.16);
     border-radius: 5px;
-    min-width: 28px;
+    min-width: 30px;
 }}
 QScrollBar::add-line, QScrollBar::sub-line {{
     height: 0px;
@@ -333,23 +433,24 @@ QScrollBar::add-page, QScrollBar::sub-page {{
 
 /* ---------- 菜单（托盘） ---------- */
 QMenu {{
-    background: {p["panel"]};
+    background: {p["panel_top"]};
     color: {p["fg"]};
-    border: 1px solid {p["border"]};
-    padding: 4px;
+    border: 1px solid {p["border_soft"]};
+    border-radius: 10px;
+    padding: 5px;
 }}
 QMenu::item {{
-    padding: 6px 18px;
-    border-radius: 6px;
+    padding: 7px 20px;
+    border-radius: 7px;
 }}
 QMenu::item:selected {{
-    background: {p["accent"]};
+    background: rgba(59, 130, 246, 0.30);
     color: #ffffff;
 }}
 QMenu::separator {{
     height: 1px;
-    background: {p["border"]};
-    margin: 4px 6px;
+    background: {p["border_soft"]};
+    margin: 5px 8px;
 }}
 """
 

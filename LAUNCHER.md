@@ -20,11 +20,17 @@ tkinter 版 `launcher.py`。界面风格致敬秋葉 aaaki 的绘世启动器：
 
 其他特性：
 
+- 深色渐变主题：窗口背景、侧边栏、卡片、按钮均为渐变或半透明质感，蓝紫强调色；
+- 全部图标都是 `launcher_qt/core/icons.py` 里用 QPainter 现场绘制的**矢量图标**，
+  没有外部图片依赖，可随主题换色、任意缩放不糊；
+- 主视觉卡片（hero）带投影与光晕，启动按钮在运行/停止时切换蓝→红渐变与光晕颜色；
 - 实时控制台按日志级别着色（TRACE/DEBUG/INFO/SUCCESS/WARNING/ERROR），最多保留 6000 行；
 - 深色原生标题栏（DWM immersive dark mode）与 Win11 圆角；
 - 系统托盘：最小化到托盘、托盘菜单启停服务器，关闭窗口时若服务器仍在运行会先确认；
 - 单实例：重复启动只会唤起已有窗口；
 - 高 DPI 友好（PassThrough 舍入，125% 缩放下不发虚）。
+
+界面尺寸：默认 **1120 × 740**，最小 980 × 660；左侧导航宽 240。
 
 ## 运行
 
@@ -91,13 +97,14 @@ launcher_qt/
 ├── core/
 │   ├── paths.py            项目根目录探测、路径常量、打包态判断
 │   ├── config.py           conf.yaml 读写（ruamel 优先，保留注释）、启动器设置
+│   ├── icons.py            用 QPainter 绘制的矢量图标集（无需图片资源）
 │   ├── theme.py            调色板、全局 QSS、深色原生标题栏
 │   ├── text.py             ANSI 清理与日志级别识别
 │   ├── server.py           run_server.py 子进程管理与就绪后打开浏览器
 │   ├── runner.py           后台命令序列执行器（更新 / 安装依赖）
 │   └── system.py           环境探测、git 信息、8 项扫描
 ├── widgets/
-│   ├── common.py           卡片、标题、按钮等通用组件
+│   ├── common.py           卡片 / 页面标题 / 按钮 / 药丸 / 阴影光晕等通用组件
 │   ├── console.py          按级别着色的控制台视图
 │   └── task_dialog.py      耗时任务对话框
 └── pages/                  home / advanced / version / troubleshoot / about
@@ -124,5 +131,5 @@ upstream  https://github.com/Open-LLM-VTuber/Open-LLM-VTuber.git        （官�
 
 - 同步官方更新：`git fetch upstream` → `git merge upstream/main`（或 `git rebase upstream/main`）；
 - 推送自己的改动：`git push origin main`；
-- 启动器「版本管理」页里的“远程状态”比较的是 `HEAD...@{upstream}`，也就是 **origin（你的 fork）**，
-  用来提示本地是否还有未推送的提交。
+- 启动器「版本管理」页里的“远程状态”比较的是 `HEAD...@{upstream}`，也就是当前分支
+  `main` 所跟踪的远程分支 `origin/main`（你的 fork），用来提示本地是否还有未推送的提交。

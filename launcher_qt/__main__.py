@@ -51,15 +51,22 @@ def _describe_environment() -> list[str]:
 
 
 def _ensure_streams() -> None:
-    """保证 print() 在 windowed exe（无控制台）里也不会崩。
+    """保证 print() 在 windowed exe（无控制台）里也不会崩，并统一按 UTF-8 输出。
 
     PyInstaller 的 ``--windowed`` 产物中 ``sys.stdout`` / ``sys.stderr`` 可能为 None，
-    此时把它们接到空设备上，避免任何 print 触发 AttributeError。
+    此时把它们接到空设备上，避免任何 print 触发 AttributeError；有句柄（被父进程重定向）
+    时则强制 UTF-8，避免中文在 GBK 代码页下变成乱码。
     """
     for name in ("stdout", "stderr"):
-        if getattr(sys, name, None) is None:
+        stream = getattr(sys, name, None)
+        if stream is None:
             devnull = open(os.devnull, "w", encoding="utf-8")  # noqa: SIM115
             setattr(sys, name, devnull)
+            continue
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:  # noqa: BLE001
+            pass
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -100,7 +107,20 @@ def main(argv: list[str] | None = None) -> int:
     try:
         window = LauncherWindow(root=args.root)
     except Exception as exc:  # noqa: BLE001
+        import traceback
+
+        traceback.print_exc()
         print(f"[启动器] 界面初始化失败: {exc}")
+        try:
+            from PySide6.QtWidgets import QMessageBox
+
+            QMessageBox.critical(
+                None,
+                "启动器启动失败",
+                f"界面初始化失败：\n\n{exc}\n\n请把上面的错误信息反馈给启动器作者。",
+            )
+        except Exception:  # noqa: BLE001
+            pass
         return 1
 
     if guard is not None:
@@ -121,7 +141,6 @@ def _settle(app, rounds: int = 12, delay: float = 0.05) -> None:
         app.processEvents()
         time.sleep(delay)
 
-
 def _run_headless(app, window, args: argparse.Namespace) -> int:
     for line in _describe_environment():
         print(line)
@@ -137,7 +156,7 @@ def _run_headless(app, window, args: argparse.Namespace) -> int:
         out_dir.mkdir(parents=True, exist_ok=True)
         for key in keys:
             window.show_page(key)
-            _settle(app, rounds=6)
+            _settle(app, rounds=32)
             out_file = out_dir / f"{key}.png"
             if window.grab().save(str(out_file)):
                 print(f"截图已保存 : {out_file}")

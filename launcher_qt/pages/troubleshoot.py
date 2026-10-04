@@ -21,11 +21,19 @@ from PySide6.QtWidgets import (
 from .. import DOCS_URL
 from ..core.system import dependency_install_tasks, scan_environment
 from ..core.theme import color
-from ..widgets.common import button, card, card_layout, hint, label, page_title
+from ..widgets.common import (
+    button,
+    card,
+    card_layout,
+    hint,
+    label,
+    page_header,
+)
 from ..widgets.task_dialog import TaskDialog
 
 LEVEL_TEXT = {"ok": "✓ 正常", "warn": "⚠ 注意", "err": "✗ 异常"}
 LEVEL_KEY = {"ok": "ok", "warn": "warn", "err": "err"}
+LEVEL_TINT = {"warn": 26, "err": 30}
 
 
 class TroubleshootPage(QWidget):
@@ -40,9 +48,11 @@ class TroubleshootPage(QWidget):
         self.scanning = False
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(18, 16, 18, 16)
-        layout.setSpacing(12)
-        layout.addWidget(page_title("疑难解答"))
+        layout.setContentsMargins(22, 18, 22, 16)
+        layout.setSpacing(14)
+        layout.addWidget(
+            page_header("疑难解答", "一键检查运行环境，并提供常用的依赖与子模块修复")
+        )
 
         # ---- 扫描 ----
         scan_card = card(margins=(16, 16, 16, 16))
@@ -51,7 +61,14 @@ class TroubleshootPage(QWidget):
 
         header = QHBoxLayout()
         header.setSpacing(10)
-        self.scan_button = button("一键扫描", variant="accent", on_click=self.scan)
+        self.scan_button = button(
+            "一键扫描",
+            variant="accent",
+            on_click=self.scan,
+            icon_name="scan",
+            icon_color="#ffffff",
+            icon_size=18,
+        )
         header.addWidget(self.scan_button)
         self.scan_status = label("尚未扫描", "cardHint")
         header.addWidget(self.scan_status)
@@ -62,7 +79,7 @@ class TroubleshootPage(QWidget):
         self.tree.setColumnCount(3)
         self.tree.setHeaderLabels(["检查项", "结果", "说明 / 建议"])
         self.tree.setRootIsDecorated(False)
-        self.tree.setAlternatingRowColors(False)
+        self.tree.setAlternatingRowColors(True)
         self.tree.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
         self.tree.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         header_view = self.tree.header()
@@ -80,12 +97,29 @@ class TroubleshootPage(QWidget):
 
         actions = QHBoxLayout()
         actions.setSpacing(10)
-        actions.addWidget(button("安装 / 修复依赖", on_click=self.fix_dependencies))
         actions.addWidget(
-            button("初始化 / 修复前端子模块", on_click=self.fix_submodules)
+            button(
+                "安装 / 修复依赖",
+                on_click=self.fix_dependencies,
+                icon_name="package",
+                icon_size=17,
+            )
         )
         actions.addWidget(
-            button("查看官方文档", on_click=lambda: webbrowser.open(DOCS_URL))
+            button(
+                "初始化 / 修复前端子模块",
+                on_click=self.fix_submodules,
+                icon_name="branch",
+                icon_size=17,
+            )
+        )
+        actions.addWidget(
+            button(
+                "查看官方文档",
+                on_click=lambda: webbrowser.open(DOCS_URL),
+                icon_name="book",
+                icon_size=17,
+            )
         )
         actions.addStretch(1)
         fix_layout.addLayout(actions)
@@ -126,6 +160,12 @@ class TroubleshootPage(QWidget):
         item.setForeground(0, qcolor)
         item.setForeground(1, qcolor)
         item.setForeground(2, qcolor)
+        tint = LEVEL_TINT.get(level)
+        if tint:
+            background = QColor(color(LEVEL_KEY[level]))
+            background.setAlpha(tint)
+            for column in range(3):
+                item.setBackground(column, background)
         self.tree.addTopLevelItem(item)
         self.tree.scrollToItem(item)
 

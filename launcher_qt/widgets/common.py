@@ -1,9 +1,21 @@
-"""通用小部件：卡片、标题、按钮等。"""
+"""通用小部件：卡片、标题、按钮、图标与阴影辅助。"""
 
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtGui import QColor
+from PySide6.QtWidgets import (
+    QFrame,
+    QGraphicsDropShadowEffect,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
+
+from ..core.icons import apply_icon, pixmap
+from ..core.theme import PALETTE
 
 
 def restyle(widget: QWidget) -> None:
@@ -14,10 +26,15 @@ def restyle(widget: QWidget) -> None:
     widget.update()
 
 
-def card(*, spacing: int = 0, margins: tuple[int, int, int, int] = (16, 16, 16, 16)) -> QFrame:
+def card(
+    *,
+    spacing: int = 0,
+    margins: tuple[int, int, int, int] = (16, 16, 16, 16),
+    object_name: str = "card",
+) -> QFrame:
     """统一样式的卡片容器。"""
     frame = QFrame()
-    frame.setObjectName("card")
+    frame.setObjectName(object_name)
     layout = QVBoxLayout(frame)
     layout.setContentsMargins(*margins)
     layout.setSpacing(spacing)
@@ -40,6 +57,18 @@ def page_title(text: str) -> QLabel:
     return widget
 
 
+def page_header(title: str, subtitle: str = "") -> QWidget:
+    """页面顶部标题 + 一行说明，统一各页面的视觉层次。"""
+    container = QWidget()
+    layout = QVBoxLayout(container)
+    layout.setContentsMargins(2, 0, 2, 0)
+    layout.setSpacing(2)
+    layout.addWidget(page_title(title))
+    if subtitle:
+        layout.addWidget(label(subtitle, "pageSub"))
+    return container
+
+
 def hint(text: str, *, wrap: int | None = None, card_scoped: bool = False) -> QLabel:
     widget = QLabel(text)
     widget.setObjectName("cardHint" if card_scoped else "hint")
@@ -49,22 +78,96 @@ def hint(text: str, *, wrap: int | None = None, card_scoped: bool = False) -> QL
     return widget
 
 
+def chip(text: str, object_name: str = "chip") -> QLabel:
+    """小药丸标签：地址、版本号等。"""
+    widget = QLabel(text)
+    widget.setObjectName(object_name)
+    widget.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+    return widget
+
+
 def button(
     text: str,
     *,
     variant: str = "",
     on_click=None,
     minimum_width: int | None = None,
+    icon_name: str | None = None,
+    icon_color: str | None = None,
+    icon_size: int = 18,
+    tooltip: str | None = None,
 ) -> QPushButton:
     widget = QPushButton(text)
     if variant:
         widget.setProperty("variant", variant)
+    if icon_name:
+        apply_icon(
+            widget,
+            icon_name,
+            color=icon_color or PALETTE["fg"],
+            size=icon_size,
+        )
     if on_click is not None:
         widget.clicked.connect(on_click)
     if minimum_width:
         widget.setMinimumWidth(minimum_width)
+    if tooltip:
+        widget.setToolTip(tooltip)
     widget.setCursor(Qt.CursorShape.PointingHandCursor)
     return widget
+
+
+def icon_button(
+    name: str,
+    *,
+    text: str = "",
+    color: str | None = None,
+    size: int = 18,
+    on_click=None,
+    tooltip: str | None = None,
+    variant: str = "ghost",
+) -> QPushButton:
+    """图标按钮（可带文字），用于「刷新」「清空」这类次要操作。"""
+    widget = button(
+        text,
+        variant=variant,
+        on_click=on_click,
+        icon_name=name,
+        icon_color=color or PALETTE["subtle"],
+        icon_size=size,
+        tooltip=tooltip,
+    )
+    return widget
+
+
+def set_button_icon(
+    widget: QPushButton, name: str, *, color: str | None = None, size: int = 18
+) -> None:
+    apply_icon(widget, name, color=color or PALETTE["fg"], size=size)
+
+
+def apply_shadow(
+    widget: QWidget,
+    *,
+    blur: int = 36,
+    dy: int = 10,
+    alpha: int = 90,
+    color: str = "#000000",
+) -> QGraphicsDropShadowEffect:
+    """给卡片/按钮加柔和投影，增加层次感。"""
+    effect = QGraphicsDropShadowEffect(widget)
+    shadow_color = QColor(color)
+    shadow_color.setAlpha(alpha)
+    effect.setColor(shadow_color)
+    effect.setBlurRadius(blur)
+    effect.setOffset(0, dy)
+    widget.setGraphicsEffect(effect)
+    return effect
+
+
+def glow(widget: QWidget, *, color: str = "#3b82f6", blur: int = 46, alpha: int = 130):
+    """强调用彩色光晕（用于主启动按钮）。"""
+    return apply_shadow(widget, blur=blur, dy=8, alpha=alpha, color=color)
 
 
 def row(*widgets: QWidget, spacing: int = 10, stretch_last: bool = False) -> QWidget:
@@ -85,5 +188,48 @@ def row(*widgets: QWidget, spacing: int = 10, stretch_last: bool = False) -> QWi
 def separator() -> QFrame:
     line = QFrame()
     line.setFrameShape(QFrame.Shape.HLine)
-    line.setStyleSheet("color: #2c2c3c; background: #2c2c3c; max-height: 1px;")
+    line.setFixedHeight(1)
+    line.setStyleSheet(
+        f"background: {PALETTE['border_soft']}; border: none; max-height: 1px;"
+    )
     return line
+
+
+def logo_pixmap(size: int = 40):
+    """应用图标（用于侧边栏品牌区）。"""
+    from ..core.paths import ICON_PATH
+
+    if not ICON_PATH.exists():
+        return None
+    from PySide6.QtGui import QPixmap
+
+    canvas = QPixmap(str(ICON_PATH))
+    if canvas.isNull():
+        return None
+    return canvas.scaled(
+        size,
+        size,
+        Qt.AspectRatioMode.KeepAspectRatio,
+        Qt.TransformationMode.SmoothTransformation,
+    )
+
+
+__all__ = [
+    "apply_shadow",
+    "button",
+    "card",
+    "card_layout",
+    "chip",
+    "glow",
+    "hint",
+    "icon_button",
+    "label",
+    "logo_pixmap",
+    "page_header",
+    "page_title",
+    "pixmap",
+    "restyle",
+    "row",
+    "separator",
+    "set_button_icon",
+]

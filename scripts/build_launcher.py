@@ -159,7 +159,12 @@ def verify(exe: Path) -> bool:
     out_dir = ROOT / "build" / "verify-shots"
     if out_dir.exists():
         shutil.rmtree(out_dir, ignore_errors=True)
-    env = dict(os.environ, QT_QPA_PLATFORM="offscreen", PYTHONIOENCODING="utf-8")
+    env = dict(
+        os.environ,
+        QT_QPA_PLATFORM="offscreen",
+        PYTHONIOENCODING="utf-8",
+        PYTHONUTF8="1",
+    )
     print(f"\n[自检] {exe.name} --screenshot {out_dir.relative_to(ROOT)}")
     try:
         proc = subprocess.run(

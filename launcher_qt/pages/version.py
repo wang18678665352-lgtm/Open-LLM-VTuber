@@ -19,7 +19,15 @@ from ..core.system import (
     dependency_install_tasks,
     project_python,
 )
-from ..widgets.common import button, card, card_layout, hint, label, page_title
+from ..widgets.common import (
+    button,
+    card,
+    card_layout,
+    hint,
+    icon_button,
+    label,
+    page_header,
+)
 from ..widgets.task_dialog import TaskDialog
 
 FIELDS = (
@@ -41,9 +49,11 @@ class VersionPage(QWidget):
         self.value_labels: dict[str, QLabel] = {}
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(18, 16, 18, 16)
-        layout.setSpacing(12)
-        layout.addWidget(page_title("版本管理"))
+        layout.setContentsMargins(22, 18, 22, 16)
+        layout.setSpacing(14)
+        layout.addWidget(
+            page_header("版本管理", "查看当前版本与远程状态，检查并拉取最新代码")
+        )
 
         # ---- 当前版本 ----
         info_card = card(margins=(16, 16, 16, 16))
@@ -53,7 +63,9 @@ class VersionPage(QWidget):
         header = QHBoxLayout()
         header.addWidget(label("当前版本信息", "cardTitle"))
         header.addStretch(1)
-        header.addWidget(button("刷新", on_click=self.refresh))
+        header.addWidget(
+            icon_button("refresh", text="刷新", on_click=self.refresh, tooltip="重新查询版本信息")
+        )
         info_layout.addLayout(header)
 
         form = QFormLayout()
@@ -77,9 +89,23 @@ class VersionPage(QWidget):
 
         actions = QHBoxLayout()
         actions.setSpacing(10)
-        actions.addWidget(button("检查更新（git fetch）", on_click=self.check_update))
         actions.addWidget(
-            button("一键更新到最新版", variant="accent", on_click=self.upgrade)
+            button(
+                "检查更新（git fetch）",
+                on_click=self.check_update,
+                icon_name="download",
+                icon_size=17,
+            )
+        )
+        actions.addWidget(
+            button(
+                "一键更新到最新版",
+                variant="accent",
+                on_click=self.upgrade,
+                icon_name="upload",
+                icon_color="#ffffff",
+                icon_size=17,
+            )
         )
         actions.addStretch(1)
         update_layout.addLayout(actions)
@@ -87,6 +113,13 @@ class VersionPage(QWidget):
             hint(
                 "「一键更新」依次执行：自动 stash 本地改动 → 拉取最新代码并更新子模块 "
                 "→ 同步配置文件 → 重新安装依赖（uv sync）。",
+                card_scoped=True,
+            )
+        )
+        update_layout.addWidget(
+            hint(
+                "远程仓库约定：origin 指向你的 fork，upstream 指向官方仓库；"
+                "可在项目目录执行 git remote -v 查看。",
                 card_scoped=True,
             )
         )
