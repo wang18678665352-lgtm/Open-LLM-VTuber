@@ -8,6 +8,13 @@ tkinter 版 `launcher.py`。界面风格致敬秋葉 aaaki 的绘世启动器：
 >
 > 旧的 tkinter 版本仍保留在根目录 `launcher.py` 中作为历史参考（`启动器.bat` 已不再调用它）。
 
+## 界面预览
+
+![启动器界面总览](docs/launcher/overview.png)
+
+单页截图放在 `docs/launcher/`：`home.png`、`advanced.png`、`version.png`、`troubleshoot.png`、
+`about.png`（由打包后的 exe 在 Windows 下实际运行并渲染生成，非设计稿）。
+
 ## 功能
 
 | 页面 | 内容 |
