@@ -3,6 +3,10 @@
 所有图标都在 24x24 的逻辑网格上作画，再按目标尺寸缩放。渲染时会额外做
 2 倍超采样并写入 devicePixelRatio，因此在高 DPI（125% / 150% 缩放）下
 依然是锐利的矢量效果，而不是被拉伸的位图。
+
+应用图标（窗口 / 任务栏 / 资源管理器）沿用项目原有的
+``launcher_qt/assets/app.ico``（由 ``frontend/favicon.ico`` 生成），
+只在文件缺失时才退化为矢量标记。
 """
 
 from __future__ import annotations
@@ -441,10 +445,23 @@ def apply_icon(widget, name: str, *, color="#5f6368", size: int = 18) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 应用图标：几何化的矢量标记（比缩放位图清晰得多）
+# 应用图标：沿用项目原有的 app.ico（由 frontend/favicon.ico 生成）
 # ---------------------------------------------------------------------------
+def _logo_file():
+    """返回应用图标文件（app.ico，其次 frontend/favicon.ico）。"""
+    from .paths import ICON_PATH, ROOT
+
+    for candidate in (ICON_PATH, ROOT / "frontend" / "favicon.ico"):
+        try:
+            if candidate.exists():
+                return candidate
+        except OSError:  # pragma: no cover - 极端路径问题
+            continue
+    return None
+
+
 def _logo_mark(painter: QPainter) -> None:
-    """在 24x24 网格里画：圆角方块 + 白色播放三角。"""
+    """兜底标记（找不到图标文件时才用）：圆角方块 + 白色播放三角。"""
     painter.setPen(Qt.PenStyle.NoPen)
     painter.setBrush(QColor("#1a73e8"))
     painter.drawRoundedRect(QRectF(1.6, 1.6, 20.8, 20.8), 5.6, 5.6)
@@ -473,13 +490,37 @@ def _logo_cached(size: int, scale: float) -> QPixmap:
     return canvas
 
 
+@lru_cache(maxsize=32)
+def _logo_bitmap(size: int, scale: float) -> QPixmap:
+    """把图标文件按 ``size`` 逻辑像素缩放，并按设备像素渲染。"""
+    device = max(1, int(round(size * scale)))
+    path = _logo_file()
+    if path is not None:
+        source = QPixmap(str(path))
+        if not source.isNull():
+            canvas = source.scaled(
+                device,
+                device,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+            canvas.setDevicePixelRatio(scale)
+            return canvas
+    return _logo_cached(size, scale)
+
+
 def logo_pixmap(size: int = 40) -> QPixmap:
-    """启动器标记（矢量绘制，任意尺寸都清晰）。"""
-    return _logo_cached(int(size), _render_scale())
+    """启动器标记（取自 app.ico，按屏幕缩放平滑渲染）。"""
+    return _logo_bitmap(int(size), _render_scale())
 
 
 def logo_icon() -> QIcon:
-    """任务栏/窗口图标用的多尺寸 QIcon。"""
+    """任务栏/窗口图标：优先直接使用 app.ico 里的多尺寸帧。"""
+    path = _logo_file()
+    if path is not None:
+        source = QIcon(str(path))
+        if not source.isNull():
+            return source
     result = QIcon()
     for px in (16, 20, 24, 32, 40, 48, 64, 128, 256):
         result.addPixmap(logo_pixmap(px))

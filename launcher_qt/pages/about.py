@@ -107,7 +107,7 @@ class AboutPage(QWidget):
         )
         material_note = hint(
             "界面采用简约的 Google Material 浅色风格（主色 #1a73e8），"
-            "所有图标与开关均为运行时绘制的矢量图形，不依赖位图素材。"
+            "导航与按钮图标均为运行时绘制的矢量图形，不依赖位图素材。"
             "本启动器为社区自制工具，与 Open-LLM-VTuber 官方无关。",
             card_scoped=True,
         )

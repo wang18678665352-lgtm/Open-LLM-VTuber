@@ -43,10 +43,12 @@ tkinter 版 `launcher.py`。界面采用简约的 **Google Material 浅色风格
 
 - Google Material 浅色主题：`#f8f9fa` 页面底 + 白色卡片 + 1px `#e8eaed` 描边，主色 `#1a73e8`，
   按钮分实心（主操作）/ 描边（次操作）/ 文字（ghost）三档；
-- 全部图标都是 `launcher_qt/core/icons.py` 里用 QPainter 现场绘制的**矢量图标**，
+- 界面图标（导航、按钮、状态）都是 `launcher_qt/core/icons.py` 里用 QPainter
+  现场绘制的**矢量图标**，
   按 2× 超采样渲染并按屏幕 DPR 对齐，没有外部图片依赖，任意缩放都清晰；
-- 应用图标同样是矢量绘制（蓝色圆角方块 + 播放三角），由 `scripts/make_icon.py`
-  按 16/24/32/48/64/128/256 逐尺寸渲染成 `launcher_qt/assets/app.ico`；
+- 应用图标（窗口 / 任务栏 / 资源管理器）沿用项目原有的 `frontend/favicon.ico`，
+  由 `scripts/make_icon.py` 按 16/24/32/48/64/128/256 生成多尺寸
+  `launcher_qt/assets/app.ico`；
 - 主视觉卡片（hero）用浅蓝容器色区分，启动按钮在运行/停止时切换蓝→红实心与柔和投影；
 - 复选框统一为 Material 3 风格的滑动开关（开关轨道图在运行时由 QPainter 生成）；
 - 页面切换有淡入动画，服务器运行中侧边栏状态点会呼吸闪烁；
@@ -104,7 +106,7 @@ build_launcher.bat --console        :: 保留控制台窗口，排错用
 build_launcher.bat --no-verify      :: 跳过构建后的离屏自检
 ```
 
-脚本会：检查依赖 → 缺少图标时用 `scripts/make_icon.py` 的矢量标记生成多尺寸 `app.ico` →
+脚本会：检查依赖 → 缺少图标时用 `scripts/make_icon.py` 从 `frontend/favicon.ico` 生成多尺寸 `app.ico` →
 调用 PyInstaller（`--onefile --windowed`、图标、`--add-data` 资源、
 补充 `ruamel.yaml` 隐藏导入、排除用不到的 Qt 模块以减小体积）→
 用 `--screenshot` 离屏渲染全部页面做一次自检。
@@ -119,13 +121,13 @@ launcher_qt/
 ├── __init__.py             应用名称 / 版本 / 链接常量
 ├── __main__.py             命令行入口（--root / --selftest / --screenshot）
 ├── app.py                  主窗口：侧边栏 + 页面堆栈 + 托盘 + 单实例
-├── assets/app.ico          应用图标（由 scripts/make_icon.py 按矢量标记生成）
+├── assets/app.ico          应用图标（由 frontend/favicon.ico 生成，scripts/make_icon.py）
 ├── core/
 │   ├── paths.py            项目根目录探测、路径常量、打包态判断
 │   ├── config.py           conf.yaml 读取、定点行编辑写入、启动器设置
 │   ├── schema.py           LLM / TTS / ASR 各引擎的字段元数据（界面据此生成表单）
 │   ├── netcheck.py         只读连通性探测（TCP / HTTP / 本地文件）
-│   ├── icons.py            用 QPainter 绘制的矢量图标集（无需图片资源）
+│   ├── icons.py            用 QPainter 绘制的矢量图标集（应用图标走 app.ico）
 │   ├── theme.py            调色板、全局 QSS、开关图片、浅色原生标题栏
 │   ├── text.py             ANSI 清理与日志级别识别
 │   ├── server.py           run_server.py 子进程管理与就绪后打开浏览器
@@ -138,7 +140,7 @@ launcher_qt/
 │   └── task_dialog.py      耗时任务对话框
 └── pages/                  home / models / advanced / version / troubleshoot / about
 scripts/build_launcher.py   打包脚本
-scripts/make_icon.py        用矢量标记生成多尺寸 app.ico
+scripts/make_icon.py        从 frontend/favicon.ico 生成多尺寸 app.ico
 ```
 
 ## 写入范围
