@@ -71,6 +71,15 @@ conf.yaml.backup
 
 *.exe
 
+# Qt 启动器（launcher_qt）：构建环境与打包产物
+.venv-launcher/
+launcher_settings.json
+conf.yaml.launcher.bak
+build/
+dist/
+*.spec
+.tmp/
+
 tmp/
 private/
 mcp_servers.json
