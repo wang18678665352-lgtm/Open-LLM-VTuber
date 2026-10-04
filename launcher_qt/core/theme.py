@@ -76,6 +76,7 @@ def build_stylesheet() -> str:
     p = PALETTE
     ui = ui_font_family()
     mono = mono_font_family()
+    assets = _widget_assets()
     return f"""
 * {{
     outline: 0;
@@ -452,7 +453,226 @@ QMenu::separator {{
     background: {p["border_soft"]};
     margin: 5px 8px;
 }}
+""" + _form_rules(p, assets)
+
+
+# ---------------------------------------------------------------------------
+# 运行时渲染的小图像（开关、下拉箭头）
+# ---------------------------------------------------------------------------
+_WIDGET_ASSETS: dict[str, str] | None = None
+
+
+def _widget_assets() -> dict[str, str]:
+    """把开关与下拉箭头画成 PNG 放到临时目录，供 QSS 的 image: url() 引用。
+
+    QSS 不支持内联 SVG/绘制代码，用运行时渲染既保持了矢量观感，
+    又不需要往仓库里塞二进制资源。
+    """
+    global _WIDGET_ASSETS
+    if _WIDGET_ASSETS is not None:
+        return _WIDGET_ASSETS
+    result: dict[str, str] = {}
+    try:
+        import tempfile
+        from pathlib import Path
+
+        from PySide6.QtCore import QRectF
+        from PySide6.QtGui import QGuiApplication, QPainter, QPainterPath, QPen, QPixmap
+
+        if QGuiApplication.instance() is None:
+            return result
+        out_dir = Path(tempfile.gettempdir()) / "open-llm-vtuber-launcher"
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        def save(name: str, pixmap: QPixmap) -> None:
+            target = out_dir / name
+            if pixmap.save(str(target), "PNG"):
+                result[name.split(".")[0]] = target.as_posix()
+
+        # 开关：关 / 开
+        for state in (False, True):
+            scale = 2
+            width, height = 38 * scale, 21 * scale
+            pixmap = QPixmap(width, height)
+            pixmap.fill(Qt.GlobalColor.transparent)
+            painter = QPainter(pixmap)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+            painter.setPen(Qt.PenStyle.NoPen)
+            track = QColor(PALETTE["accent"] if state else "#3a3a4d")
+            painter.setBrush(track)
+            radius = (height - 4) / 2
+            painter.drawRoundedRect(QRectF(2, 2, width - 4, height - 4), radius, radius)
+            knob = height - 10
+            left = (width - 5 - knob) if state else 5
+            painter.setBrush(QColor("#ffffff" if state else "#8f8fa6"))
+            painter.drawEllipse(QRectF(left, 5, knob, knob))
+            painter.end()
+            save(f"switch_{'on' if state else 'off'}.png", pixmap)
+
+        # 下拉箭头
+        scale = 3
+        size = 24 * scale
+        pixmap = QPixmap(size, size)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        pen = QPen(QColor(PALETTE["subtle"]))
+        pen.setWidthF(2.4 * scale)
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+        painter.setPen(pen)
+        path = QPainterPath()
+        path.moveTo(7.4 * scale, 10.0 * scale)
+        path.lineTo(12.0 * scale, 14.6 * scale)
+        path.lineTo(16.6 * scale, 10.0 * scale)
+        painter.drawPath(path)
+        painter.end()
+        save("chevron.png", pixmap)
+    except Exception:  # noqa: BLE001 - 资源渲染失败时退化为纯色控件
+        pass
+    _WIDGET_ASSETS = result
+    return result
+
+
+def _form_rules(p: dict[str, str], assets: dict[str, str]) -> str:
+    """表单、分段选择器与开关的样式（放在主样式之后以便覆盖）。"""
+    arrow = assets.get("chevron", "")
+    switch_on = assets.get("switch_on", "")
+    switch_off = assets.get("switch_off", "")
+    arrow_rule = (
+        f"""
+QComboBox#input::down-arrow {{
+    image: url("{arrow}");
+    width: 13px;
+    height: 13px;
+}}
 """
+        if arrow
+        else ""
+    )
+    switch_rule = (
+        f"""
+QCheckBox::indicator:unchecked {{
+    image: url("{switch_off}");
+}}
+QCheckBox::indicator:checked {{
+    image: url("{switch_on}");
+}}
+"""
+        if switch_off and switch_on
+        else ""
+    )
+    return f"""
+/* ---------- 滚动容器 ---------- */
+#pageScroll, #pageScroll > QWidget > QWidget {{
+    background: transparent;
+    border: none;
+}}
+
+/* ---------- 分段选择器 ---------- */
+#segmented {{
+    background: rgba(0, 0, 0, 0.28);
+    border: 1px solid {p["border_soft"]};
+    border-radius: 11px;
+}}
+#segButton {{
+    background: transparent;
+    color: {p["subtle"]};
+    border: none;
+    border-radius: 8px;
+    padding: 7px 20px;
+    font-size: 10pt;
+}}
+#segButton:hover {{
+    background: {p["hover"]};
+    color: {p["fg"]};
+}}
+#segButton:checked {{
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 {p["accent"]}, stop:1 {p["accent2"]});
+    color: #ffffff;
+    font-weight: 600;
+}}
+
+/* ---------- 表单 ---------- */
+#formLabel {{
+    color: {p["fg"]};
+    font-size: 10pt;
+    font-weight: 600;
+    background: transparent;
+}}
+#fieldHint {{
+    color: {p["subtle"]};
+    font-size: 8.5pt;
+    background: transparent;
+}}
+#providerNote {{
+    color: {p["subtle"]};
+    font-size: 9pt;
+    background: transparent;
+}}
+#sectionLabel {{
+    color: {p["launcher"]};
+    font-size: 9.5pt;
+    font-weight: 600;
+    background: transparent;
+}}
+#saveState {{
+    color: {p["subtle"]};
+    font-size: 9pt;
+    background: transparent;
+}}
+QLineEdit#input, QComboBox#input, QPlainTextEdit#inputArea {{
+    background: {p["entry_bg"]};
+    border: 1px solid {p["border_soft"]};
+    border-radius: 8px;
+    padding: 7px 10px;
+    color: {p["fg"]};
+    selection-background-color: {p["accent"]};
+}}
+QLineEdit#input {{
+    min-height: 19px;
+}}
+QLineEdit#input:hover, QComboBox#input:hover, QPlainTextEdit#inputArea:hover {{
+    border: 1px solid rgba(255, 255, 255, 0.14);
+}}
+QLineEdit#input:focus, QComboBox#input:focus, QPlainTextEdit#inputArea:focus {{
+    border: 1px solid {p["accent"]};
+    background: rgba(59, 130, 246, 0.08);
+}}
+QLineEdit#input:disabled {{
+    color: {p["subtle"]};
+}}
+QComboBox#input::drop-down {{
+    width: 26px;
+    border: none;
+    background: transparent;
+}}
+QComboBox#input QAbstractItemView {{
+    background: {p["panel_top"]};
+    color: {p["fg"]};
+    border: 1px solid {p["border_soft"]};
+    border-radius: 8px;
+    padding: 4px;
+    outline: 0;
+    selection-background-color: rgba(59, 130, 246, 0.30);
+}}
+{arrow_rule}
+/* ---------- 开关 ---------- */
+QCheckBox {{
+    color: {p["fg"]};
+    spacing: 8px;
+    background: transparent;
+}}
+QCheckBox::indicator {{
+    width: 34px;
+    height: 19px;
+}}
+QCheckBox::indicator:disabled {{
+    opacity: 140;
+}}
+{switch_rule}"""
+
 
 
 # ---------------------------------------------------------------------------

@@ -2,12 +2,23 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QEvent, QObject, QSize, Qt, Signal
+from PySide6.QtCore import (
+    QAbstractAnimation,
+    QEasingCurve,
+    QEvent,
+    QObject,
+    QPropertyAnimation,
+    QSize,
+    Qt,
+    QTimer,
+    Signal,
+)
 from PySide6.QtGui import QAction, QIcon
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import (
     QButtonGroup,
     QFrame,
+    QGraphicsOpacityEffect,
     QHBoxLayout,
     QLabel,
     QMainWindow,
@@ -31,15 +42,20 @@ from .core.theme import PALETTE, apply_native_chrome
 from .pages.about import AboutPage
 from .pages.advanced import AdvancedPage
 from .pages.home import HomePage
+from .pages.models import ModelsPage
 from .pages.troubleshoot import TroubleshootPage
 from .pages.version import VersionPage
 from .widgets.common import apply_shadow, logo_pixmap
 
 SINGLE_INSTANCE_KEY = "Open-LLM-VTuber-Launcher-1"
 
+#: 运行中状态点的呼吸色（比 PALETTE["ok"] 暗一档）
+PULSE_DIM = "#2f7d5c"
+
 #: (页面 key, 导航标题, 页面类, 导航图标)
 PAGES: tuple[tuple[str, str, type, str], ...] = (
     ("home", "一键启动", HomePage, "play"),
+    ("models", "模型配置", ModelsPage, "robot"),
     ("advanced", "高级选项", AdvancedPage, "settings"),
     ("version", "版本管理", VersionPage, "branch"),
     ("troubleshoot", "疑难解答", TroubleshootPage, "scan"),
@@ -91,6 +107,12 @@ class LauncherWindow(QMainWindow):
         self._force_quit = False
         self._chrome_applied = False
         self.tray: QSystemTrayIcon | None = None
+        self._current_page = ""
+        self._fade_anim: QPropertyAnimation | None = None
+        self._pulse_on = False
+        self._pulse_timer = QTimer(self)
+        self._pulse_timer.setInterval(700)
+        self._pulse_timer.timeout.connect(self._pulse_tick)
 
         self.setWindowTitle(APP_NAME)
         self.resize(1120, 740)
@@ -226,6 +248,8 @@ class LauncherWindow(QMainWindow):
         page = self.pages.get(key)
         if page is None:
             return
+        changed = key != self._current_page
+        self._current_page = key
         self.stack.setCurrentWidget(page)
         button = self.nav_buttons.get(key)
         if button is not None:
@@ -234,6 +258,25 @@ class LauncherWindow(QMainWindow):
         on_show = getattr(page, "on_show", None)
         if callable(on_show):
             on_show()
+        if changed:
+            self._fade_in(page)
+
+    def _fade_in(self, page: QWidget) -> None:
+        """切换页面时做一次轻微的淡入，让界面不显得生硬。"""
+        effect = QGraphicsOpacityEffect(page)
+        page.setGraphicsEffect(effect)
+        anim = QPropertyAnimation(effect, b"opacity", self)
+        anim.setDuration(170)
+        anim.setStartValue(0.3)
+        anim.setEndValue(1.0)
+        anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+
+        def _cleanup() -> None:
+            page.setGraphicsEffect(None)
+
+        anim.finished.connect(_cleanup)
+        anim.start(QAbstractAnimation.DeletionPolicy.DeleteWhenStopped)
+        self._fade_anim = anim
 
     def _refresh_nav_icons(self, active: str) -> None:
         """选中项用高亮色图标，其余用弱化色。"""
@@ -262,16 +305,29 @@ class LauncherWindow(QMainWindow):
             open_browser=bool(self.options.get("open_browser", True)),
         )
 
+    def _dot_style(self, color: str) -> str:
+        return (
+            "border-radius: 4px; min-width: 8px; max-width: 8px;"
+            " min-height: 8px; max-height: 8px; background: " + color + ";"
+        )
+
+    def _pulse_tick(self) -> None:
+        self._pulse_on = not self._pulse_on
+        self.status_dot.setStyleSheet(
+            self._dot_style(PALETTE["ok"] if self._pulse_on else PULSE_DIM)
+        )
+
     def _on_server_state(self, running: bool) -> None:
         home = self.pages.get("home")
         if home is not None and hasattr(home, "set_running"):
             home.set_running(running)
-        self.status_dot.setStyleSheet(
-            "border-radius: 4px; min-width: 8px; max-width: 8px;"
-            " min-height: 8px; max-height: 8px; background: "
-            + (PALETTE["ok"] if running else PALETTE["subtle"])
-            + ";"
-        )
+        if running:
+            self._pulse_on = True
+            self.status_dot.setStyleSheet(self._dot_style(PALETTE["ok"]))
+            self._pulse_timer.start()
+        else:
+            self._pulse_timer.stop()
+            self.status_dot.setStyleSheet(self._dot_style(PALETTE["subtle"]))
         self.status_text.setText("运行中" if running else "未运行")
         self.status_text.setStyleSheet(
             f"color: {PALETTE['ok'] if running else PALETTE['subtle']};"

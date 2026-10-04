@@ -162,6 +162,14 @@ def _run_headless(app, window, args: argparse.Namespace) -> int:
                 print(f"截图已保存 : {out_file}")
             else:
                 print(f"截图保存失败: {out_file}")
+            variants = getattr(window.pages[key], "screenshot_variants", None)
+            if callable(variants):
+                for name, run in variants():
+                    run()
+                    _settle(app, rounds=24)
+                    extra_file = out_dir / f"{key}-{name}.png"
+                    if window.grab().save(str(extra_file)):
+                        print(f"截图已保存 : {extra_file}")
         return 0
 
     if args.selftest:

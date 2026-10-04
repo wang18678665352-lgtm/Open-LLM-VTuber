@@ -242,6 +242,78 @@ def _heart(painter: QPainter) -> None:
     painter.drawPath(path)
 
 
+def _eye(painter: QPainter) -> None:
+    path = QPainterPath()
+    path.moveTo(3.2, 12.0)
+    path.quadTo(12.0, 4.6, 20.8, 12.0)
+    path.quadTo(12.0, 19.4, 3.2, 12.0)
+    painter.drawPath(path)
+    _dot(painter, 12.0, 12.0, 2.5)
+
+
+def _eye_off(painter: QPainter) -> None:
+    _eye(painter)
+    painter.drawLine(QPointF(5.2, 19.0), QPointF(18.8, 5.0))
+
+
+def _chevron_down(painter: QPainter) -> None:
+    _polyline(painter, [(7.4, 10.2), (12.0, 14.8), (16.6, 10.2)])
+
+
+def _check(painter: QPainter) -> None:
+    _polyline(painter, [(5.8, 12.6), (10.2, 17.0), (18.2, 7.4)])
+
+
+def _alert(painter: QPainter) -> None:
+    path = QPainterPath()
+    path.moveTo(12.0, 4.4)
+    path.lineTo(20.4, 19.0)
+    path.lineTo(3.6, 19.0)
+    path.closeSubpath()
+    painter.drawPath(path)
+    painter.drawLine(QPointF(12.0, 10.0), QPointF(12.0, 14.2))
+    _dot(painter, 12.0, 16.6, 0.9)
+
+
+def _save(painter: QPainter) -> None:
+    path = QPainterPath()
+    path.addRoundedRect(QRectF(4.6, 4.6, 14.8, 14.8), 2.8, 2.8)
+    painter.drawPath(path)
+    painter.drawRect(QRectF(9.0, 5.4, 6.0, 4.6))
+    painter.drawRect(QRectF(7.6, 12.8, 8.8, 6.6))
+
+
+def _key(painter: QPainter) -> None:
+    painter.drawEllipse(QPointF(8.4, 12.0), 3.6, 3.6)
+    painter.drawLine(QPointF(12.0, 12.0), QPointF(20.0, 12.0))
+    painter.drawLine(QPointF(16.4, 12.0), QPointF(16.4, 15.2))
+    painter.drawLine(QPointF(19.4, 12.0), QPointF(19.4, 14.4))
+
+
+def _robot(painter: QPainter) -> None:
+    path = QPainterPath()
+    path.addRoundedRect(QRectF(4.6, 8.4, 14.8, 11.0), 3.0, 3.0)
+    painter.drawPath(path)
+    painter.drawLine(QPointF(12.0, 5.6), QPointF(12.0, 8.4))
+    _dot(painter, 12.0, 4.4, 1.1)
+    _dot(painter, 9.4, 13.4, 1.0)
+    _dot(painter, 14.6, 13.4, 1.0)
+
+
+def _sparkle(painter: QPainter) -> None:
+    path = QPainterPath()
+    path.moveTo(12.0, 3.6)
+    path.lineTo(13.7, 10.3)
+    path.lineTo(20.4, 12.0)
+    path.lineTo(13.7, 13.7)
+    path.lineTo(12.0, 20.4)
+    path.lineTo(10.3, 13.7)
+    path.lineTo(3.6, 12.0)
+    path.lineTo(10.3, 10.3)
+    path.closeSubpath()
+    painter.drawPath(path)
+
+
 _DRAWERS = {
     "play": _play,
     "stop": _stop,
@@ -263,6 +335,15 @@ _DRAWERS = {
     "code": _code,
     "power": _power,
     "heart": _heart,
+    "eye": _eye,
+    "eye_off": _eye_off,
+    "chevron_down": _chevron_down,
+    "check": _check,
+    "alert": _alert,
+    "save": _save,
+    "key": _key,
+    "robot": _robot,
+    "sparkle": _sparkle,
 }
 
 

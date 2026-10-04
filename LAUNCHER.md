@@ -12,18 +12,31 @@ tkinter 版 `launcher.py`。界面风格致敬秋葉 aaaki 的绘世启动器：
 
 ![启动器界面总览](docs/launcher/overview.png)
 
-单页截图放在 `docs/launcher/`：`home.png`、`advanced.png`、`version.png`、`troubleshoot.png`、
-`about.png`（由打包后的 exe 在 Windows 下实际运行并渲染生成，非设计稿）。
+单页截图放在 `docs/launcher/`：`home.png`、`models.png`、`advanced.png`、`version.png`、
+`troubleshoot.png`、`about.png`（由打包后的 exe 在 Windows 下实际运行并渲染生成，非设计稿）。
 
 ## 功能
 
 | 页面 | 内容 |
 | --- | --- |
 | 一键启动 | 启停 `run_server.py`、实时彩色控制台、`--verbose` / `--hf_mirror` / 自动打开浏览器开关、自动滚动与清空 |
+| 模型配置 | 图形化编辑 `conf.yaml`：切换 LLM / TTS / ASR 引擎，填写 API Key、接口地址与全部参数，测试连接，保存（Ctrl+S） |
 | 高级选项 | 修改 `conf.yaml` 的监听地址与端口（自动备份）、6 个快捷打开入口、环境信息面板、托盘行为开关 |
 | 版本管理 | 当前分支 / 最新提交 / 远程领先落后状态、`git fetch` 检查更新、一键更新（stash → pull + 子模块 → 同步配置 → `uv sync`） |
 | 疑难解答 | 8 项环境一键扫描（Python 版本、uv、关键依赖、配置文件、前端子模块、Live2D 模型、ASR 模型、端口占用）、安装依赖、修复子模块 |
 | 关于 | 版本信息、仓库与文档链接 |
+
+### 模型配置页
+
+- **三个分段**：对话模型（12 个 LLM 提供商）、语音合成（20 个 TTS 引擎）、语音识别（7 个 ASR 引擎）；
+- 每个提供商都有对应字段：API Key（默认掩码，可点眼睛查看）、接口地址、模型名、温度、
+  采样参数、参考音频、VITS 模型路径等；布尔项是开关，枚举项是下拉框，JSON 项（如 DeepSeek 的
+  `extra_body`）会做格式校验；
+- **测试连接**只做只读探测：接口地址走 TCP + HTTP 探测，本地模型文件检查是否存在，
+  API Key 只检查是否非空（不会发起任何付费请求）；
+- 界面顶部显示当前引擎对应的 `conf.yaml` 路径，右侧可一键打开 `conf.yaml`；
+- 保存时只改动目标行：值没变化就不动文件，写入前自动备份为 `conf.yaml.launcher.bak`，
+  并复查写回后的 YAML 是否与预期一致（不一致会自动退化到 ruamel 重写）。
 
 其他特性：
 
@@ -31,6 +44,8 @@ tkinter 版 `launcher.py`。界面风格致敬秋葉 aaaki 的绘世启动器：
 - 全部图标都是 `launcher_qt/core/icons.py` 里用 QPainter 现场绘制的**矢量图标**，
   没有外部图片依赖，可随主题换色、任意缩放不糊；
 - 主视觉卡片（hero）带投影与光晕，启动按钮在运行/停止时切换蓝→红渐变与光晕颜色；
+- 复选框统一为 iOS 风格的滑动开关（开关图片在运行时由 QPainter 生成）；
+- 页面切换有淡入动画，服务器运行中侧边栏状态点会呼吸闪烁；
 - 实时控制台按日志级别着色（TRACE/DEBUG/INFO/SUCCESS/WARNING/ERROR），最多保留 6000 行；
 - 深色原生标题栏（DWM immersive dark mode）与 Win11 圆角；
 - 系统托盘：最小化到托盘、托盘菜单启停服务器，关闭窗口时若服务器仍在运行会先确认；
@@ -63,7 +78,7 @@ tkinter 版 `launcher.py`。界面风格致敬秋葉 aaaki 的绘世启动器：
 ```text
 --root DIR          指定项目根目录（默认自动探测）
 --selftest          离屏构建全部页面并自检后退出（CI / 打包验证）
---screenshot DIR    离屏渲染每个页面并保存 PNG 到 DIR
+--screenshot DIR    离屏渲染每个页面并保存 PNG 到 DIR（模型配置页会额外输出 TTS / ASR 分段）
 ```
 
 ## 打包单文件 exe
@@ -103,18 +118,21 @@ launcher_qt/
 ├── assets/app.ico          应用图标（由 frontend/favicon.ico 生成）
 ├── core/
 │   ├── paths.py            项目根目录探测、路径常量、打包态判断
-│   ├── config.py           conf.yaml 读写（ruamel 优先，保留注释）、启动器设置
+│   ├── config.py           conf.yaml 读取、定点行编辑写入、启动器设置
+│   ├── schema.py           LLM / TTS / ASR 各引擎的字段元数据（界面据此生成表单）
+│   ├── netcheck.py         只读连通性探测（TCP / HTTP / 本地文件）
 │   ├── icons.py            用 QPainter 绘制的矢量图标集（无需图片资源）
-│   ├── theme.py            调色板、全局 QSS、深色原生标题栏
+│   ├── theme.py            调色板、全局 QSS、开关图片、深色原生标题栏
 │   ├── text.py             ANSI 清理与日志级别识别
 │   ├── server.py           run_server.py 子进程管理与就绪后打开浏览器
 │   ├── runner.py           后台命令序列执行器（更新 / 安装依赖）
 │   └── system.py           环境探测、git 信息、8 项扫描
 ├── widgets/
 │   ├── common.py           卡片 / 页面标题 / 按钮 / 药丸 / 阴影光晕等通用组件
+│   ├── forms.py            分段选择器、密码输入框、按 schema 生成的表单字段
 │   ├── console.py          按级别着色的控制台视图
 │   └── task_dialog.py      耗时任务对话框
-└── pages/                  home / advanced / version / troubleshoot / about
+└── pages/                  home / models / advanced / version / troubleshoot / about
 scripts/build_launcher.py   打包脚本
 ```
 
@@ -122,8 +140,10 @@ scripts/build_launcher.py   打包脚本
 
 启动器**不会修改项目源码**，只有两类写操作：
 
-- `conf.yaml`：修改监听地址 / 端口时写入（首次写入前自动备份为 `conf.yaml.launcher.bak`，
-  使用 ruamel.yaml 保留注释；缺少该库时退化为定点正则替换）；
+- `conf.yaml`：在「模型配置」页保存引擎参数、或在「高级选项」页修改监听地址 / 端口时写入。
+  首次写入前自动备份为 `conf.yaml.launcher.bak`；写入采用定点行编辑——只改目标行，
+  其余行逐字节保持原样（注释、缩进、引号风格均不变），值没有变化就完全不写文件，
+  写完后还会重新解析并逐项核对，异常时退化到 ruamel.yaml 重写；
 - `launcher_settings.json`：保存启动器自己的选项（详细日志 / HF 镜像 / 自动打开浏览器 /
   自动滚动 / 最小化到托盘）。
 

@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 APP_NAME = "Open-LLM-VTuber 启动器"
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.2.0"
 GITHUB_URL = "https://github.com/Open-LLM-VTuber/Open-LLM-VTuber"
 DOCS_URL = "https://open-llm-vtuber.github.io/"
 
