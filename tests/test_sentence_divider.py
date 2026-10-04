@@ -221,9 +221,21 @@ def test_segment_text_by_regex(text, expected):
 
 def test_segment_text_by_regex_does_not_emit_abbreviation_fragments():
     sentences, remaining = segment_text_by_regex("Mr. Smith is here.")
-    assert "Mr." not in sentences
-    assert any("Smith is here." in sentence for sentence in sentences)
+    assert "Mr." not in sentences  # the abbreviation is not a sentence of its own
+    assert sentences == ["Mr. Smith is here."]  # ... but its text is not dropped
     assert remaining == ""
+
+
+def test_segment_text_by_regex_keeps_a_trailing_abbreviation_in_the_remainder():
+    sentences, remaining = segment_text_by_regex("Hello. Mr. Smith is")
+    assert sentences == ["Hello."]
+    assert remaining == "Mr. Smith is"
+
+
+def test_abbreviations_are_not_lost_while_streaming():
+    divider = SentenceDivider(segment_method="regex")
+    _, items = process_with(divider, ["Mr. Smith is here. And done."])
+    assert texts(items) == ["Mr. Smith is here.", "And done."]
 
 
 @pytest.mark.parametrize(
